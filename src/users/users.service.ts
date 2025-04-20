@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -50,7 +51,7 @@ export class UsersService {
 
   async update(id: number, updateUserDto: UpdateUserDto) {
     await this.findOne(id);
-    const data: any = {};
+    const data: Prisma.UserUpdateInput = {};
 
     if (updateUserDto.email) {
       data.email = updateUserDto.email;

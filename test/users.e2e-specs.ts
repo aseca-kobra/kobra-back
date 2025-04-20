@@ -4,6 +4,14 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 
+// Define interfaces for expected responses
+interface UserResponse {
+  id: number;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 describe('UsersController (e2e)', () => {
   let app: INestApplication;
   let prismaService: PrismaService;
@@ -38,9 +46,11 @@ describe('UsersController (e2e)', () => {
       })
       .expect(201);
 
-    expect(response.body).toHaveProperty('id');
-    expect(response.body.email).toBe('test@example.com');
-    expect(response.body).not.toHaveProperty('password'); // Password should not be returned
+    const responseBody = response.body as UserResponse;
+
+    expect(responseBody).toHaveProperty('id');
+    expect(responseBody.email).toBe('test@example.com');
+    expect(responseBody).not.toHaveProperty('password'); // Password should not be returned
   });
 
   it('/users (GET) - should return all users', async () => {
@@ -48,7 +58,9 @@ describe('UsersController (e2e)', () => {
       .get('/users')
       .expect(200);
 
-    expect(Array.isArray(response.body)).toBe(true);
-    expect(response.body.length).toBeGreaterThan(0);
+    const responseBody = response.body as UserResponse[];
+
+    expect(Array.isArray(responseBody)).toBe(true);
+    expect(responseBody.length).toBeGreaterThan(0);
   });
 });
