@@ -16,6 +16,11 @@ export class UsersService {
       data: {
         email: createUserDto.email,
         password: hashedPassword,
+        wallet: {
+          create: {
+            balance: 0,
+          },
+        },
       },
     });
   }
