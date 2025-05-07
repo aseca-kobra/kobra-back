@@ -11,7 +11,7 @@ import { AuthController } from './auth.controller';
     UsersModule,
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'your-secret-key', // In production, use environment variable
+      secret: process.env.JWT_SECRET || 'your-secret-key',
       signOptions: { expiresIn: '1d' },
     }),
   ],
