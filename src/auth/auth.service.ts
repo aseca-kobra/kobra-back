@@ -11,10 +11,10 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, password: string): Promise<any> {
+  async validateUser(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
-    if (user && await bcrypt.compare(password, user.password)) {
-      const { password, ...result } = user;
+    if (user && (await bcrypt.compare(password, user.password))) {
+      const { password: _password, ...result } = user;
       return result;
     }
     return null;
@@ -35,7 +35,7 @@ export class AuthService {
 
   async signup(createUserDto: CreateUserDto) {
     const user = await this.usersService.create(createUserDto);
-    const { password, ...result } = user;
+    const { password: _password, ...result } = user;
     return result;
   }
 }
