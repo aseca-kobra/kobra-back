@@ -1,0 +1,64 @@
+TP Final
+
+Aseguramiento de la Calidad de Software
+1er Cuatrimestre 2025
+
+Objetivo
+
+Se debe realizar una app web y mobile de observabilidad end 2 end de billetera electrónica similar a PayPal o MercadoPago. 
+La misma debe contar con una API que cumpla la función de servir a la app mobile y la app web. Considerando:
+- Gestión de cuenta virtual (Wallet).
+  - Crear cuenta virtual asociada a un mail y password.
+  - Consultar el saldo disponible en la cuenta virtual.
+  - Registrar movimientos (historial de transacciones simplificado)
+    - Gastos
+    - Ingresos de dinero
+    - Transferencia de dinero P2P (entre usuarios de la billetera)
+      - Enviar dinero a otro usuario mediante email o ID único
+      - Que se vea en el registro de movimiento de ambos
+- Integración de medios externos (simulado)
+  - Simular la carga de saldo desde medios externos (tarjeta, cuenta bancaria), osea simulamos cuando el usuario desde el home banking hace TF a la Wallet
+  - Simular DEBIN desde una cuenta bancaria a Wallet, osea desde el front end web y mobile pedir un DEBIN y en cascada nuestra Wallet solicita dinero al medio externo
+
+Las apps web y mobile deben ser minimalistas de modo de hacer lo mínimo indispensable para poder probar el sistema.
+
+Para las APIs o web apps se debe implementar proyectos con un lenguaje de programación a elección entre C#, Java, Kotlin, Python, Ruby, Javascript, Typescript.
+
+Se deben realizar tests unitarios con frameworks xUnit o Specs. También deben existir tests de integración full stack, contra persistencia y APIs internas o externas.
+
+Se deben realizar tests end2end con Cypress y appium sobre la app real. Se debe testear contra un chrome headless.
+
+Se deben realizar tests de stress con Locust en Python sobre el API. Se deben diferenciar los esquemas de Stress y Load testing, presentando una clara estrategia y justificación de los workflows elegidos y dimensionamiento.
+
+Se debe versionar en github el avance utilizando SemVer.
+
+Se debe integrar a algún servicio SaaS (github, gitlab, bitbucket), usando mecanismos de pipelines versionados en el propio repo, para llevar adelante las tareas de CI (compilación, tests unitarios y delivery vía herramienta basada en docker).
+
+Debe utilizarse docker compose para todo el stack, con volúmenes persistentes.
+
+Realizar una presentación final al resto de la clase.
+
+Plagio
+
+Se pueden consultar ideas y estrategias de implementación con otros grupos, pero no se puede copiar el código. El plagio entre grupos será penalizado con la desaprobación del trabajo práctico de cada grupo involucrado.
+
+Entregables
+
+El material a entregar se detalla a continuación:
+● Informe que detalle el diseño elegido y su justificación.
+● Versión digital del código fuente en github
+
+Cada entrega tendrá una calificación que será utilizada para la nota final del TP.
+La nota del TP será de la siguiente manera: 60% entrega de código + 40% presentación final.
+La fecha de inicio es el 10/04/2025.
+La fecha límite de entrega final y defensa es el 12/6/2025 y recuperatorio TP 19/6/2025.
+Se realizarán controles en la mayoría de las clases intermedias, y los docentes darán feedback que el alumnado deberá entregar las subsiguientes clases de modo obligatorio.
+
+Links
+
+Carpeta Drive: https://shorturl.at/8EK3X
+Encuesta para grupos: https://forms.gle/zCwnTeKJkgWf5N2HA
+Mails Docentes:
+ELamonica@austral.edu.ar Ezequiel Lamonica
+BVilla@austral.edu.ar moravabrille@gmail.com
+SAlonso-ext@austral.edu.ar Sebastián Alonso
