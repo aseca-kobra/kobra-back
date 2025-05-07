@@ -16,12 +16,7 @@ export class AuthController {
   async login(@Body() loginDto: LoginDto) {
     try {
       return await this.authService.login(loginDto.email, loginDto.password);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new UnauthorizedException(
-          `Invalid credentials: ${error.message}`,
-        );
-      }
+    } catch (_error) {
       throw new UnauthorizedException('Invalid credentials');
     }
   }
