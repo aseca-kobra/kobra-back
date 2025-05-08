@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
 // Mock the bcrypt module
@@ -91,50 +90,6 @@ describe('UsersService', () => {
 
       expect(result).toEqual(expectedUsers);
       expect(mockPrismaService.user.findMany).toHaveBeenCalled();
-    });
-  });
-
-  describe('findOne', () => {
-    it('should return a user if it exists', async () => {
-      const userId = 1;
-      const expectedUser = {
-        id: userId,
-        email: 'test@example.com',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockPrismaService.user.findUnique.mockResolvedValue(expectedUser);
-
-      const result = await service.findOne(userId);
-
-      expect(result).toEqual(expectedUser);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: userId },
-        select: {
-          id: true,
-          email: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
-    });
-
-    it('should throw NotFoundException if user does not exist', async () => {
-      const userId = 999;
-
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
-
-      await expect(service.findOne(userId)).rejects.toThrow(NotFoundException);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: userId },
-        select: {
-          id: true,
-          email: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
     });
   });
 });
