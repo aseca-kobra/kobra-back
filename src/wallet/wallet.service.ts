@@ -4,14 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { TransactionType } from '@prisma/client';
-
 
 @Injectable()
 export class WalletService {
   constructor(private prisma: PrismaService) {}
 
-  async getBalance(userId: number) {
+  async getBalance(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { wallet: true },
@@ -23,7 +21,7 @@ export class WalletService {
     return { balance: user.wallet.balance };
   }
 
-  async deposit(userId: number, amount: number) {
+  async deposit(userId: string, amount: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { wallet: true },
@@ -37,16 +35,10 @@ export class WalletService {
     return this.prisma.wallet.update({
       where: { id: user.wallet.id },
       data: { balance: newBalance },
-      transactions: {
-        create: {
-          amount,
-          type: TransactionType.INCOME,
-        },
-      },
     });
   }
 
-  async extract(userId: number, amount: number) {
+  async extract(userId: string, amount: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { wallet: true },

@@ -14,13 +14,13 @@ export class WalletController {
   constructor(private walletService: WalletService) {}
 
   @Get('balance/:userId')
-  getWallet(@Param('userId', ParseIntPipe) userId: number) {
+  getWallet(@Param('userId', ParseIntPipe) userId: string) {
     return this.walletService.getBalance(userId);
   }
 
   @Post('deposit/:userId')
   async deposit(
-    @Param('userId', ParseIntPipe) userId: number,
+    @Param('userId', ParseIntPipe) userId: string,
     @Body() dto: WalletAmountDto,
   ) {
     return this.walletService.deposit(userId, dto.amount);
@@ -28,7 +28,7 @@ export class WalletController {
 
   @Post('withdraw/:userId')
   async withdraw(
-    @Param('userId', ParseIntPipe) userId: number,
+    @Param('userId', ParseIntPipe) userId: string,
     @Body() dto: WalletAmountDto,
   ) {
     return this.walletService.extract(userId, dto.amount);

@@ -18,22 +18,22 @@ model User {
 }
 
 model Wallet {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(uuid())
   balance   Float    @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId  Int     @unique
+  userId  String     @unique
   user    User    @relation(fields: [userId], references: [id])
   transactions Transaction[]
 }
 
 model Transaction {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(uuid())
   amount    Float
   type      TransactionType
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  walletId  Int
+  walletId  String
   wallet    Wallet   @relation(fields: [walletId], references: [id])
 }
 
