@@ -8,7 +8,9 @@ import { Prisma } from '@prisma/client';
 // Mock the bcrypt module
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockImplementation(() => 'hashed_password'),
-  compare: jest.fn().mockImplementation((pass, hash) => pass === 'correct_password'),
+  compare: jest
+    .fn()
+    .mockImplementation((pass, _hash) => pass === 'correct_password'),
 }));
 
 describe('UsersService', () => {
@@ -81,15 +83,20 @@ describe('UsersService', () => {
         password: 'password123',
       };
 
-      const prismaError = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
-        code: 'P2002',
-        clientVersion: '5.0.0',
-        meta: { target: ['email'] },
-      });
+      const prismaError = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        {
+          code: 'P2002',
+          clientVersion: '5.0.0',
+          meta: { target: ['email'] },
+        },
+      );
 
       mockPrismaService.user.create.mockRejectedValue(prismaError);
 
-      await expect(service.create(createUserDto)).rejects.toThrow(ConflictException);
+      await expect(service.create(createUserDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
@@ -210,7 +217,9 @@ describe('UsersService', () => {
 
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(userId, updateUserDto)).rejects.toThrow(NotFoundException);
+      await expect(service.update(userId, updateUserDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

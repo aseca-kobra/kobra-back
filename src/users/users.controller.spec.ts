@@ -1,12 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 describe('UsersController', () => {
   let controller: UsersController;
-  let service: UsersService;
 
   const mockUsersService = {
     findAll: jest.fn(),
@@ -28,7 +26,6 @@ describe('UsersController', () => {
     }).compile();
 
     controller = module.get<UsersController>(UsersController);
-    service = module.get<UsersService>(UsersService);
   });
 
   afterEach(() => {
@@ -55,7 +52,7 @@ describe('UsersController', () => {
       const result = await controller.findAll();
 
       expect(result).toEqual(expectedUsers);
-      expect(service.findAll).toHaveBeenCalled();
+      expect(mockUsersService.findAll).toHaveBeenCalled();
     });
   });
 
@@ -74,7 +71,7 @@ describe('UsersController', () => {
       const result = await controller.findOne(userId);
 
       expect(result).toEqual(expectedUser);
-      expect(service.findOne).toHaveBeenCalledWith(userId);
+      expect(mockUsersService.findOne).toHaveBeenCalledWith(userId);
     });
   });
 
@@ -97,7 +94,10 @@ describe('UsersController', () => {
       const result = await controller.update(userId, updateUserDto);
 
       expect(result).toEqual(expectedUser);
-      expect(service.update).toHaveBeenCalledWith(userId, updateUserDto);
+      expect(mockUsersService.update).toHaveBeenCalledWith(
+        userId,
+        updateUserDto,
+      );
     });
   });
 
@@ -116,7 +116,7 @@ describe('UsersController', () => {
       const result = await controller.remove(userId);
 
       expect(result).toEqual(expectedUser);
-      expect(service.remove).toHaveBeenCalledWith(userId);
+      expect(mockUsersService.remove).toHaveBeenCalledWith(userId);
     });
   });
 });
