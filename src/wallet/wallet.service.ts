@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TransactionType } from '@prisma/client';
+
 
 @Injectable()
 export class WalletService {
@@ -35,6 +37,12 @@ export class WalletService {
     return this.prisma.wallet.update({
       where: { id: user.wallet.id },
       data: { balance: newBalance },
+      transactions: {
+        create: {
+          amount,
+          type: TransactionType.INCOME,
+        },
+      },
     });
   }
 
