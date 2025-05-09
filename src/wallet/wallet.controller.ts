@@ -2,35 +2,37 @@ import {
   Body,
   Controller,
   Get,
-  Param,
-  ParseIntPipe,
   Post,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { WalletAmountDto } from './dto/wallet.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('wallet')
+@UseGuards(JwtAuthGuard)
 export class WalletController {
   constructor(private walletService: WalletService) {}
 
-  @Get('balance/:userId')
-  getWallet(@Param('userId', ParseIntPipe) userId: string) {
-    return this.walletService.getBalance(userId);
+  @Get('balance')
+  getWallet(@Request() req) {
+    return this.walletService.getBalance(req.user.userId);
   }
 
-  @Post('deposit/:userId')
+  @Post('deposit')
   async deposit(
-    @Param('userId', ParseIntPipe) userId: string,
+    @Request() req,
     @Body() dto: WalletAmountDto,
   ) {
-    return this.walletService.deposit(userId, dto.amount);
+    return this.walletService.deposit(req.user.userId, dto.amount);
   }
 
-  @Post('withdraw/:userId')
+  @Post('withdraw')
   async withdraw(
-    @Param('userId', ParseIntPipe) userId: string,
+    @Request() req,
     @Body() dto: WalletAmountDto,
   ) {
-    return this.walletService.extract(userId, dto.amount);
+    return this.walletService.extract(req.user.userId, dto.amount);
   }
 }

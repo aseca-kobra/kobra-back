@@ -25,16 +25,22 @@ export class UsersService {
   async create(createUserDto: CreateUserDto) {
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
-    return this.prisma.user.create({
-      data: {
-        email: createUserDto.email,
-        password: hashedPassword,
-        wallet: {
-          create: {
-            balance: 0,
-          },
+    return this.prisma.$transaction(async (prisma) => {
+      const user = await prisma.user.create({
+        data: {
+          email: createUserDto.email,
+          password: hashedPassword,
         },
-      },
+      });
+
+      await prisma.wallet.create({
+        data: {
+          balance: 0,
+          userId: user.id,
+        },
+      });
+
+      return user;
     });
   }
 
