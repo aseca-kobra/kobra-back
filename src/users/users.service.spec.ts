@@ -177,6 +177,44 @@ describe('UsersService', () => {
     });
   });
 
+  describe('findByEmail', () => {
+    it('should return a user by email', async () => {
+      const email = 'test@example.com';
+      const expectedUser = {
+        id: '1',
+        email,
+        password: 'hashed_password',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(expectedUser);
+
+      const result = await service.findByEmail(email);
+
+      expect(result).toEqual(expectedUser);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+        where: { email },
+        select: {
+          id: true,
+          email: true,
+          password: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    });
+
+    it('should return null if user not found by email', async () => {
+      const email = 'nonexistent@example.com';
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.findByEmail(email);
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('update', () => {
     it('should update a user', async () => {
       const userId = '1';
@@ -219,6 +257,175 @@ describe('UsersService', () => {
 
       await expect(service.update(userId, updateUserDto)).rejects.toThrow(
         NotFoundException,
+      );
+    });
+
+    it('should update only password when only password is provided', async () => {
+      const userId = '1';
+      const updateUserDto = {
+        password: 'new_password',
+      };
+
+      const expectedUser = {
+        id: userId,
+        email: 'test@example.com',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.update.mockResolvedValue(expectedUser);
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: userId });
+
+      const result = await service.update(userId, updateUserDto);
+
+      expect(result).toEqual(expectedUser);
+      expect(bcrypt.hash).toHaveBeenCalledWith('new_password', 10);
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+        where: { id: userId },
+        data: { password: 'hashed_password' },
+        select: {
+          id: true,
+          email: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    });
+
+    it('should update both email and password when both are provided', async () => {
+      const userId = '1';
+      const updateUserDto = {
+        email: 'updated@example.com',
+        password: 'new_password',
+      };
+
+      const expectedUser = {
+        id: userId,
+        email: 'updated@example.com',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.update.mockResolvedValue(expectedUser);
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: userId });
+
+      const result = await service.update(userId, updateUserDto);
+
+      expect(result).toEqual(expectedUser);
+      expect(bcrypt.hash).toHaveBeenCalledWith('new_password', 10);
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+        where: { id: userId },
+        data: {
+          email: 'updated@example.com',
+          password: 'hashed_password',
+        },
+        select: {
+          id: true,
+          email: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    });
+
+    it('should throw ConflictException if updating email to an existing one', async () => {
+      const userId = '1';
+      const updateUserDto = {
+        email: 'existing@example.com',
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: userId });
+      mockPrismaService.user.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: '5.0.0',
+          meta: { target: ['email'] },
+        }),
+      );
+
+      await expect(service.update(userId, updateUserDto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should hash password when updating only password', async () => {
+      const userId = '1';
+      const newPassword = 'new_secure_password';
+      const updateUserDto = {
+        password: newPassword,
+      };
+
+      const expectedUser = {
+        id: userId,
+        email: 'test@example.com',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: userId });
+      mockPrismaService.user.update.mockResolvedValue(expectedUser);
+
+      const result = await service.update(userId, updateUserDto);
+
+      expect(result).toEqual(expectedUser);
+      expect(bcrypt.hash).toHaveBeenCalledWith(newPassword, 10);
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+        where: { id: userId },
+        data: { password: 'hashed_password' },
+        select: {
+          id: true,
+          email: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    });
+
+    it('should not hash password if password is not provided', async () => {
+      const userId = '1';
+      const updateUserDto = {
+        email: 'new@example.com',
+      };
+
+      const expectedUser = {
+        id: userId,
+        email: 'new@example.com',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: userId });
+      mockPrismaService.user.update.mockResolvedValue(expectedUser);
+
+      const result = await service.update(userId, updateUserDto);
+
+      expect(result).toEqual(expectedUser);
+      expect(bcrypt.hash).not.toHaveBeenCalled();
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+        where: { id: userId },
+        data: { email: 'new@example.com' },
+        select: {
+          id: true,
+          email: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    });
+
+    it('should handle Prisma errors when updating password', async () => {
+      const userId = '1';
+      const updateUserDto = {
+        password: 'new_password',
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: userId });
+      mockPrismaService.user.update.mockRejectedValue(
+        new Error('Database error'),
+      );
+
+      await expect(service.update(userId, updateUserDto)).rejects.toThrow(
+        'Database error',
       );
     });
   });
