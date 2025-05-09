@@ -7,7 +7,6 @@ import { UnauthorizedException } from '@nestjs/common';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let authService: AuthService;
 
   const mockAuthService = {
     signup: jest.fn(),
@@ -26,7 +25,6 @@ describe('AuthController', () => {
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
-    authService = module.get<AuthService>(AuthService);
   });
 
   afterEach(() => {
@@ -66,7 +64,9 @@ describe('AuthController', () => {
 
       mockAuthService.signup.mockRejectedValue(new Error('Validation failed'));
 
-      await expect(controller.signup(createUserDto)).rejects.toThrow('Validation failed');
+      await expect(controller.signup(createUserDto)).rejects.toThrow(
+        'Validation failed',
+      );
     });
   });
 
@@ -103,9 +103,13 @@ describe('AuthController', () => {
         password: 'wrong_password',
       };
 
-      mockAuthService.login.mockRejectedValue(new UnauthorizedException('Invalid credentials'));
+      mockAuthService.login.mockRejectedValue(
+        new UnauthorizedException('Invalid credentials'),
+      );
 
-      await expect(controller.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should handle validation errors from the service', async () => {
@@ -116,7 +120,9 @@ describe('AuthController', () => {
 
       mockAuthService.login.mockRejectedValue(new Error('Validation failed'));
 
-      await expect(controller.login(loginDto)).rejects.toThrow('Validation failed');
+      await expect(controller.login(loginDto)).rejects.toThrow(
+        'Validation failed',
+      );
     });
   });
-}); 
+});

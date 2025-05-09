@@ -5,10 +5,16 @@ import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
+// Mock bcrypt module
+jest.mock('bcrypt', () => ({
+  compare: jest.fn(),
+  hash: jest.fn(),
+}));
+
 describe('AuthService', () => {
   let service: AuthService;
-  let usersService: UsersService;
-  let jwtService: JwtService;
+  let _usersService: UsersService;
+  let _jwtService: JwtService;
 
   const mockUsersService = {
     findByEmail: jest.fn(),
@@ -35,8 +41,8 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    usersService = module.get<UsersService>(UsersService);
-    jwtService = module.get<JwtService>(JwtService);
+    _usersService = module.get<UsersService>(UsersService);
+    _jwtService = module.get<JwtService>(JwtService);
   });
 
   afterEach(() => {
@@ -60,7 +66,7 @@ describe('AuthService', () => {
       };
 
       mockUsersService.findByEmail.mockResolvedValue(user);
-      jest.spyOn(bcrypt, 'compare').mockImplementation(() => Promise.resolve(true));
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const result = await service.validateUser(email, password);
 
@@ -97,7 +103,7 @@ describe('AuthService', () => {
       };
 
       mockUsersService.findByEmail.mockResolvedValue(user);
-      jest.spyOn(bcrypt, 'compare').mockImplementation(() => Promise.resolve(false));
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       const result = await service.validateUser(email, password);
 
@@ -118,8 +124,11 @@ describe('AuthService', () => {
       };
       const token = 'jwt_token';
 
-      mockUsersService.findByEmail.mockResolvedValue({ ...user, password: 'hashed_password' });
-      jest.spyOn(bcrypt, 'compare').mockImplementation(() => Promise.resolve(true));
+      mockUsersService.findByEmail.mockResolvedValue({
+        ...user,
+        password: 'hashed_password',
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       mockJwtService.sign.mockReturnValue(token);
 
       const result = await service.login(email, password);
@@ -140,7 +149,9 @@ describe('AuthService', () => {
 
       mockUsersService.findByEmail.mockResolvedValue(null);
 
-      await expect(service.login(email, password)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(email, password)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
@@ -171,4 +182,4 @@ describe('AuthService', () => {
       expect(mockUsersService.create).toHaveBeenCalledWith(createUserDto);
     });
   });
-}); 
+});
