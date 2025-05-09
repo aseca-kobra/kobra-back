@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TransactionType } from '@prisma/client';
 
 @Injectable()
 export class WalletService {
@@ -31,10 +32,21 @@ export class WalletService {
       throw new NotFoundException('Wallet not found for this user');
     }
 
-    const newBalance = user.wallet.balance + amount;
-    return this.prisma.wallet.update({
-      where: { id: user.wallet.id },
-      data: { balance: newBalance },
+    return this.prisma.$transaction(async (tx) => {
+      const updatedWallet = await tx.wallet.update({
+        where: { id: user.wallet!.id },
+        data: { balance: { increment: amount } },
+      });
+
+      await tx.transaction.create({
+        data: {
+          amount,
+          type: TransactionType.DEPOSIT,
+          walletId: user.wallet!.id,
+        },
+      });
+
+      return updatedWallet;
     });
   }
 
@@ -48,15 +60,25 @@ export class WalletService {
       throw new NotFoundException('Wallet not found for this user');
     }
 
-    const newBalance = user.wallet.balance - amount;
-
-    if (newBalance < 0) {
+    if (user.wallet.balance < amount) {
       throw new BadRequestException('Insufficient balance');
     }
 
-    return this.prisma.wallet.update({
-      where: { id: user.wallet.id },
-      data: { balance: newBalance },
+    return this.prisma.$transaction(async (tx) => {
+      const updatedWallet = await tx.wallet.update({
+        where: { id: user.wallet!.id },
+        data: { balance: { decrement: amount } },
+      });
+
+      await tx.transaction.create({
+        data: {
+          amount,
+          type: TransactionType.WITHDRAWAL,
+          walletId: user.wallet!.id,
+        },
+      });
+
+      return updatedWallet;
     });
   }
 }
