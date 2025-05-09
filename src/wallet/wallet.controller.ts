@@ -21,18 +21,12 @@ export class WalletController {
   }
 
   @Post('deposit')
-  async deposit(
-    @Request() req,
-    @Body() dto: WalletAmountDto,
-  ) {
+  async deposit(@Request() req, @Body() dto: WalletAmountDto) {
     return this.walletService.deposit(req.user.userId, dto.amount);
   }
 
   @Post('withdraw')
-  async withdraw(
-    @Request() req,
-    @Body() dto: WalletAmountDto,
-  ) {
+  async withdraw(@Request() req, @Body() dto: WalletAmountDto) {
     return this.walletService.extract(req.user.userId, dto.amount);
   }
 }
