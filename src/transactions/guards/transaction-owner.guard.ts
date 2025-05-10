@@ -6,15 +6,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RequestWithUser } from '../transactions.controller';
 
 @Injectable()
 export class TransactionOwnerGuard implements CanActivate {
   constructor(private prisma: PrismaService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<RequestWithUser>();
     const userId = request.user.userId;
-    const transactionId = request.params.id;
+    const transactionId = request.params.id || undefined;
 
     // If there's no transaction ID, we're either creating a new transaction
     // or listing all transactions, which are already protected by the userId

@@ -13,7 +13,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TransactionOwnerGuard } from './guards/transaction-owner.guard';
 import { Request as ExpressRequest } from 'express';
 
-interface RequestWithUser extends ExpressRequest {
+export interface RequestWithUser extends ExpressRequest {
   user: {
     userId: string;
   };
