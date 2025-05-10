@@ -5,14 +5,15 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
-import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { TransactionType, Wallet, User } from '@prisma/client';
 
 @Injectable()
 export class TransactionsService {
   constructor(private prisma: PrismaService) {}
 
-  private async findUserWithWallet(userId: string): Promise<User & { wallet: Wallet | null }> {
+  private async findUserWithWallet(
+    userId: string,
+  ): Promise<User & { wallet: Wallet | null }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { wallet: true },
@@ -25,7 +26,9 @@ export class TransactionsService {
     return user;
   }
 
-  private async findRecipientWithWallet(email: string): Promise<User & { wallet: Wallet | null }> {
+  private async findRecipientWithWallet(
+    email: string,
+  ): Promise<User & { wallet: Wallet | null }> {
     const recipient = await this.prisma.user.findUnique({
       where: { email },
       include: { wallet: true },
@@ -40,40 +43,40 @@ export class TransactionsService {
 
   async create(createTransactionDto: CreateTransactionDto, userId: string) {
     const sender = await this.findUserWithWallet(userId);
-    const recipient = await this.findRecipientWithWallet(createTransactionDto.recipientEmail);
+    const recipient = await this.findRecipientWithWallet(
+      createTransactionDto.recipientEmail,
+    );
 
     if (sender.wallet!.balance < createTransactionDto.amount) {
       throw new BadRequestException('Insufficient balance');
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // Update sender's wallet
       await tx.wallet.update({
         where: { id: sender.wallet!.id },
         data: { balance: { decrement: createTransactionDto.amount } },
       });
 
-      // Update recipient's wallet
       await tx.wallet.update({
         where: { id: recipient.wallet!.id },
         data: { balance: { increment: createTransactionDto.amount } },
       });
 
-      // Create sender's transaction record
       const senderTransaction = await tx.transaction.create({
         data: {
           amount: createTransactionDto.amount,
           type: TransactionType.TRANSFER_OUT,
           walletId: sender.wallet!.id,
+          relatedUserId: recipient.id,
         },
       });
 
-      // Create recipient's transaction record
       await tx.transaction.create({
         data: {
           amount: createTransactionDto.amount,
           type: TransactionType.TRANSFER_IN,
           walletId: recipient.wallet!.id,
+          relatedUserId: sender.id,
         },
       });
 
@@ -107,24 +110,4 @@ export class TransactionsService {
     return transaction;
   }
 
-  async update(
-    id: string,
-    updateTransactionDto: UpdateTransactionDto,
-    userId: string,
-  ) {
-    await this.findOne(id, userId);
-
-    return this.prisma.transaction.update({
-      where: { id },
-      data: updateTransactionDto,
-    });
-  }
-
-  async remove(id: string, userId: string) {
-    await this.findOne(id, userId);
-
-    return this.prisma.transaction.delete({
-      where: { id },
-    });
-  }
 }

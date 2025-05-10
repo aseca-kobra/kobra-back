@@ -15,6 +15,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   wallet    Wallet?
+  transactionsRelatedToMe Transaction[] @relation("RelatedUser")
 }
 
 model Wallet {
@@ -35,6 +36,9 @@ model Transaction {
   updatedAt DateTime @updatedAt
   walletId  String
   wallet    Wallet   @relation(fields: [walletId], references: [id])
+
+  relatedUserId String?
+  relatedUser   User?            @relation("RelatedUser", fields: [relatedUserId], references: [id])
 }
 
 enum TransactionType {

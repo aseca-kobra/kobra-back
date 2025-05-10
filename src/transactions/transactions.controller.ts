@@ -3,24 +3,29 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
   UseGuards,
   Request,
 } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
-import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { TransactionOwnerGuard } from './guards/transaction-owner.guard';
+import { Request as ExpressRequest } from 'express';
+
+interface RequestWithUser extends ExpressRequest {
+  user: {
+    userId: string;
+  };
+}
 
 @Controller('transactions')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, TransactionOwnerGuard)
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
   @Post()
-  transfer(@Body() createTransactionDto: CreateTransactionDto, @Request() req) {
+  transfer(@Body() createTransactionDto: CreateTransactionDto, @Request() req: RequestWithUser) {
     return this.transactionsService.create(
       createTransactionDto,
       req.user.userId,
@@ -28,26 +33,12 @@ export class TransactionsController {
   }
 
   @Get()
-  findAll(@Request() req) {
+  findAll(@Request() req: RequestWithUser) {
     return this.transactionsService.findAll(req.user.userId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @Request() req) {
+  findOne(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.transactionsService.findOne(id, req.user.userId);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateTransactionDto: UpdateTransactionDto,
-    @Request() req,
-  ) {
-    return this.transactionsService.update(id, updateTransactionDto, req.user.userId);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string, @Request() req) {
-    return this.transactionsService.remove(id, req.user.userId);
   }
 }
