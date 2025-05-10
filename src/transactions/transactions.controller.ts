@@ -25,7 +25,10 @@ export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
   @Post()
-  transfer(@Body() createTransactionDto: CreateTransactionDto, @Request() req: RequestWithUser) {
+  transfer(
+    @Body() createTransactionDto: CreateTransactionDto,
+    @Request() req: RequestWithUser,
+  ) {
     return this.transactionsService.create(
       createTransactionDto,
       req.user.userId,
