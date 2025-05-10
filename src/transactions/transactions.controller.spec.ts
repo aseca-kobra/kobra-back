@@ -81,7 +81,9 @@ describe('TransactionsController', () => {
           id: '2',
           wallet: { id: 'wallet2', balance: 0 },
         });
-      mockPrismaService.transaction.create.mockResolvedValue(expectedTransaction);
+      mockPrismaService.transaction.create.mockResolvedValue(
+        expectedTransaction,
+      );
 
       const result = await controller.transfer(transferDto, mockRequest);
 
@@ -106,7 +108,9 @@ describe('TransactionsController', () => {
         id: userId,
         wallet: { id: 'wallet1' },
       });
-      mockPrismaService.transaction.findMany.mockResolvedValue(expectedTransactions);
+      mockPrismaService.transaction.findMany.mockResolvedValue(
+        expectedTransactions,
+      );
 
       const result = await controller.findAll(mockRequest);
 
@@ -130,7 +134,9 @@ describe('TransactionsController', () => {
         id: userId,
         wallet: { id: 'wallet1' },
       });
-      mockPrismaService.transaction.findFirst.mockResolvedValue(expectedTransaction);
+      mockPrismaService.transaction.findFirst.mockResolvedValue(
+        expectedTransaction,
+      );
 
       const result = await controller.findOne(transactionId, mockRequest);
 

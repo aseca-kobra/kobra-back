@@ -1,4 +1,10 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -22,7 +28,9 @@ export class TransactionOwnerGuard implements CanActivate {
     });
 
     if (!transaction) {
-      throw new NotFoundException(`Transaction with ID ${transactionId} not found`);
+      throw new NotFoundException(
+        `Transaction with ID ${transactionId} not found`,
+      );
     }
 
     const wallet = await this.prisma.wallet.findUnique({
@@ -35,4 +43,4 @@ export class TransactionOwnerGuard implements CanActivate {
 
     return true;
   }
-} 
+}

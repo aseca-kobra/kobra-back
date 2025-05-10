@@ -2,7 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionsService } from './transactions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { TransactionType, Prisma, User, Wallet, Transaction } from '@prisma/client';
+import {
+  TransactionType,
+  Prisma,
+  User,
+  Wallet,
+  Transaction,
+} from '@prisma/client';
 
 describe('TransactionsService', () => {
   let service: TransactionsService;
@@ -93,12 +99,11 @@ describe('TransactionsService', () => {
       (mockPrismaService.user.findUnique as jest.Mock)
         .mockResolvedValueOnce(mockSender)
         .mockResolvedValueOnce(mockRecipient);
-      (mockPrismaService.transaction.create as jest.Mock).mockResolvedValue(mockTransaction);
-
-      const result = await service.create(
-        { amount, recipientEmail },
-        senderId,
+      (mockPrismaService.transaction.create as jest.Mock).mockResolvedValue(
+        mockTransaction,
       );
+
+      const result = await service.create({ amount, recipientEmail }, senderId);
 
       expect(result).toEqual(mockTransaction);
       expect(mockPrismaService.wallet.update).toHaveBeenCalledTimes(2);
@@ -221,8 +226,12 @@ describe('TransactionsService', () => {
         },
       ];
 
-      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (mockPrismaService.transaction.findMany as jest.Mock).mockResolvedValue(mockTransactions);
+      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(
+        mockUser,
+      );
+      (mockPrismaService.transaction.findMany as jest.Mock).mockResolvedValue(
+        mockTransactions,
+      );
 
       const result = await service.findAll(userId);
 
@@ -270,8 +279,12 @@ describe('TransactionsService', () => {
         updatedAt: new Date(),
       };
 
-      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (mockPrismaService.transaction.findFirst as jest.Mock).mockResolvedValue(mockTransaction);
+      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(
+        mockUser,
+      );
+      (mockPrismaService.transaction.findFirst as jest.Mock).mockResolvedValue(
+        mockTransaction,
+      );
 
       const result = await service.findOne(transactionId, userId);
 
@@ -312,8 +325,12 @@ describe('TransactionsService', () => {
         updatedAt: new Date(),
       };
 
-      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (mockPrismaService.transaction.findFirst as jest.Mock).mockResolvedValue(null);
+      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(
+        mockUser,
+      );
+      (mockPrismaService.transaction.findFirst as jest.Mock).mockResolvedValue(
+        null,
+      );
 
       await expect(service.findOne(transactionId, userId)).rejects.toThrow(
         NotFoundException,

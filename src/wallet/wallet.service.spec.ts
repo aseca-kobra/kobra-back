@@ -2,7 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { WalletService } from './wallet.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { TransactionType, Prisma, User, Wallet, Transaction } from '@prisma/client';
+import {
+  TransactionType,
+  Prisma,
+  User,
+  Wallet,
+  Transaction,
+} from '@prisma/client';
 
 describe('WalletService', () => {
   let service: WalletService;
@@ -60,7 +66,9 @@ describe('WalletService', () => {
         updatedAt: new Date(),
       };
 
-      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(
+        mockUser,
+      );
 
       const result = await service.getBalance(userId);
 
@@ -75,7 +83,9 @@ describe('WalletService', () => {
       const userId = '1';
       (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.getBalance(userId)).rejects.toThrow(NotFoundException);
+      await expect(service.getBalance(userId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -106,8 +116,12 @@ describe('WalletService', () => {
         updatedAt: new Date(),
       };
 
-      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (mockPrismaService.wallet.update as jest.Mock).mockResolvedValue(updatedWallet);
+      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(
+        mockUser,
+      );
+      (mockPrismaService.wallet.update as jest.Mock).mockResolvedValue(
+        updatedWallet,
+      );
 
       const result = await service.deposit(userId, amount);
 
@@ -163,8 +177,12 @@ describe('WalletService', () => {
         updatedAt: new Date(),
       };
 
-      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (mockPrismaService.wallet.update as jest.Mock).mockResolvedValue(updatedWallet);
+      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(
+        mockUser,
+      );
+      (mockPrismaService.wallet.update as jest.Mock).mockResolvedValue(
+        updatedWallet,
+      );
 
       const result = await service.extract(userId, amount);
 
@@ -210,7 +228,9 @@ describe('WalletService', () => {
         updatedAt: new Date(),
       };
 
-      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      (mockPrismaService.user.findUnique as jest.Mock).mockResolvedValue(
+        mockUser,
+      );
 
       await expect(service.extract(userId, amount)).rejects.toThrow(
         BadRequestException,
