@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { RequestWithUser } from '../transactions.controller';
+import { RequestWithUser } from '../../common/types/request.types';
 
 @Injectable()
 export class TransactionOwnerGuard implements CanActivate {

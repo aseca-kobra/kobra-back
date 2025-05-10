@@ -3,13 +3,7 @@ import { TransactionsController } from './transactions.controller';
 import { TransactionsService } from './transactions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Request } from 'express';
-
-interface RequestWithUser extends Request {
-  user: {
-    userId: string;
-  };
-}
+import { RequestWithUser } from '../common/types/request.types';
 
 type MockPrismaService = {
   user: {

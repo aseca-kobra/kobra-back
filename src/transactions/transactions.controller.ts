@@ -11,13 +11,7 @@ import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TransactionOwnerGuard } from './guards/transaction-owner.guard';
-import { Request as ExpressRequest } from 'express';
-
-export interface RequestWithUser extends ExpressRequest {
-  user: {
-    userId: string;
-  };
-}
+import { RequestWithUser } from '../common/types/request.types';
 
 @Controller('transactions')
 @UseGuards(JwtAuthGuard, TransactionOwnerGuard)

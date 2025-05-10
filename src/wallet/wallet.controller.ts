@@ -9,6 +9,7 @@ import {
 import { WalletService } from './wallet.service';
 import { WalletAmountDto } from './dto/wallet.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequestWithUser } from '../common/types/request.types';
 
 @Controller('wallet')
 @UseGuards(JwtAuthGuard)
@@ -16,17 +17,20 @@ export class WalletController {
   constructor(private walletService: WalletService) {}
 
   @Get('balance')
-  getWallet(@Request() req) {
+  getWallet(@Request() req: RequestWithUser) {
     return this.walletService.getBalance(req.user.userId);
   }
 
   @Post('deposit')
-  async deposit(@Request() req, @Body() dto: WalletAmountDto) {
+  async deposit(@Request() req: RequestWithUser, @Body() dto: WalletAmountDto) {
     return this.walletService.deposit(req.user.userId, dto.amount);
   }
 
   @Post('withdraw')
-  async withdraw(@Request() req, @Body() dto: WalletAmountDto) {
+  async withdraw(
+    @Request() req: RequestWithUser,
+    @Body() dto: WalletAmountDto,
+  ) {
     return this.walletService.extract(req.user.userId, dto.amount);
   }
 }

@@ -2,10 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { WalletController } from './wallet.controller';
 import { WalletService } from './wallet.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequestWithUser } from '../common/types/request.types';
 
 describe('WalletController', () => {
   let controller: WalletController;
-  let service: WalletService;
+  let _service: WalletService;
 
   const mockWalletService = {
     getBalance: jest.fn(),
@@ -28,7 +29,7 @@ describe('WalletController', () => {
       .compile();
 
     controller = module.get<WalletController>(WalletController);
-    service = module.get<WalletService>(WalletService);
+    _service = module.get<WalletService>(WalletService);
   });
 
   afterEach(() => {
@@ -43,7 +44,7 @@ describe('WalletController', () => {
     it('should return wallet balance', async () => {
       const userId = '1';
       const expectedBalance = { balance: 100 };
-      const mockRequest = { user: { userId } };
+      const mockRequest = { user: { userId } } as RequestWithUser;
 
       mockWalletService.getBalance.mockResolvedValue(expectedBalance);
 
@@ -58,7 +59,7 @@ describe('WalletController', () => {
     it('should deposit money to wallet', async () => {
       const userId = '1';
       const amount = 100;
-      const mockRequest = { user: { userId } };
+      const mockRequest = { user: { userId } } as RequestWithUser;
       const expectedWallet = { id: 'wallet1', balance: 100 };
 
       mockWalletService.deposit.mockResolvedValue(expectedWallet);
@@ -74,7 +75,7 @@ describe('WalletController', () => {
     it('should withdraw money from wallet', async () => {
       const userId = '1';
       const amount = 50;
-      const mockRequest = { user: { userId } };
+      const mockRequest = { user: { userId } } as RequestWithUser;
       const expectedWallet = { id: 'wallet1', balance: 50 };
 
       mockWalletService.extract.mockResolvedValue(expectedWallet);
