@@ -24,6 +24,10 @@ describe('UsersService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    wallet: {
+      create: jest.fn(),
+    },
+    $transaction: jest.fn((callback) => callback(mockPrismaService)),
   };
 
   beforeEach(async () => {
