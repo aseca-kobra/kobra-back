@@ -11,11 +11,28 @@ interface RequestWithUser extends Request {
   };
 }
 
+type MockPrismaService = {
+  user: {
+    findUnique: jest.Mock;
+  };
+  wallet: {
+    update: jest.Mock;
+  };
+  transaction: {
+    create: jest.Mock;
+    findMany: jest.Mock;
+    findFirst: jest.Mock;
+  };
+  $transaction: jest.Mock<
+    Promise<unknown>,
+    [(prisma: MockPrismaService) => Promise<unknown>]
+  >;
+};
+
 describe('TransactionsController', () => {
   let controller: TransactionsController;
-  let service: TransactionsService;
 
-  const mockPrismaService = {
+  const mockPrismaService: MockPrismaService = {
     user: {
       findUnique: jest.fn(),
     },
@@ -46,7 +63,6 @@ describe('TransactionsController', () => {
       .compile();
 
     controller = module.get<TransactionsController>(TransactionsController);
-    service = module.get<TransactionsService>(TransactionsService);
   });
 
   afterEach(() => {
