@@ -10,6 +10,7 @@ import {
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserOwnershipGuard } from './guards/user-ownership.guard';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -27,11 +28,13 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @UseGuards(UserOwnershipGuard)
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
+  @UseGuards(UserOwnershipGuard)
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }
