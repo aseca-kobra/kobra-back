@@ -1,7 +1,7 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
-  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -28,13 +28,23 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto) {
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-
     try {
-      return await this.prisma.user.create({
-        data: {
-          email: createUserDto.email,
-          password: hashedPassword,
-        },
+      return await this.prisma.$transaction(async (prisma) => {
+        const user = await prisma.user.create({
+          data: {
+            email: createUserDto.email,
+            password: hashedPassword,
+          },
+        });
+
+        await prisma.wallet.create({
+          data: {
+            balance: 0,
+            userId: user.id,
+          },
+        });
+
+        return user;
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
