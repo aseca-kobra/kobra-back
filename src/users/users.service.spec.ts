@@ -13,10 +13,27 @@ jest.mock('bcrypt', () => ({
     .mockImplementation((pass, _hash) => pass === 'correct_password'),
 }));
 
+type MockPrismaService = {
+  user: {
+    create: jest.Mock;
+    findMany: jest.Mock;
+    findUnique: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  wallet: {
+    create: jest.Mock;
+  };
+  $transaction: jest.Mock<
+    Promise<unknown>,
+    [(prisma: MockPrismaService) => Promise<unknown>]
+  >;
+};
+
 describe('UsersService', () => {
   let service: UsersService;
 
-  const mockPrismaService = {
+  const mockPrismaService: MockPrismaService = {
     user: {
       create: jest.fn(),
       findMany: jest.fn(),
