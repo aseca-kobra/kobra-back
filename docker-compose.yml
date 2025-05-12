@@ -1,6 +1,6 @@
 services:
   kobra-back-app:
-    build: .
+    image: ghcr.io/aseca-kobra/kobra-back:latest
     container_name: kobra-back-app
     ports:
       - "3000:3000"
