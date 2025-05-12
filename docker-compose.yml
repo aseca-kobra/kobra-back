@@ -1,4 +1,13 @@
 services:
+  kobra-back-app:
+    build: .
+    container_name: kobra-back-app
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@kobra-back-db:5432/postgres
+    depends_on:
+      - kobra-back-db
   kobra-back-db:
     image: postgres:alpine
     container_name: kobra-back-db
