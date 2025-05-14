@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 
 @Injectable()
 export class UsersRepository {
   constructor(private prisma: PrismaService) {}
 
-  async findByEmail(email: string) {
+  async findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
       select: {
@@ -19,7 +19,7 @@ export class UsersRepository {
     });
   }
 
-  async create(email: string, hashedPassword: string) {
+  async create(email: string, hashedPassword: string): Promise<User> {
     return this.prisma.$transaction(async (prisma) => {
       const user = await prisma.user.create({
         data: {
@@ -39,7 +39,7 @@ export class UsersRepository {
     });
   }
 
-  findAll() {
+  findAll(): Promise<Partial<User>[]> {
     return this.prisma.user.findMany({
       select: {
         id: true,
@@ -50,7 +50,7 @@ export class UsersRepository {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<Partial<User> | null> {
     return this.prisma.user.findUnique({
       where: { id },
       select: {
@@ -62,7 +62,10 @@ export class UsersRepository {
     });
   }
 
-  async update(id: string, data: Prisma.UserUpdateInput) {
+  async update(
+    id: string,
+    data: Prisma.UserUpdateInput,
+  ): Promise<Partial<User>> {
     return this.prisma.user.update({
       where: { id },
       data,
@@ -75,7 +78,7 @@ export class UsersRepository {
     });
   }
 
-  async delete(id: string) {
+  async delete(id: string): Promise<User> {
     return this.prisma.user.delete({
       where: { id },
     });

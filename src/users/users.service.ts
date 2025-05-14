@@ -6,39 +6,35 @@ import {
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
-import { Prisma } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
   constructor(private usersRepository: UsersRepository) {}
 
-  async findByEmail(email: string) {
+  async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findByEmail(email);
   }
 
-  async create(createUserDto: CreateUserDto) {
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    try {
-      return await this.usersRepository.create(
-        createUserDto.email,
-        hashedPassword,
-      );
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException('Email already exists');
-        }
-      }
-      throw error;
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    const existingUser = await this.findByEmail(createUserDto.email);
+    if (existingUser) {
+      throw new ConflictException('Email already exists');
     }
+
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    return await this.usersRepository.create(
+      createUserDto.email,
+      hashedPassword,
+    );
   }
 
-  findAll() {
+  findAll(): Promise<Partial<User>[]> {
     return this.usersRepository.findAll();
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<Partial<User>> {
     const user = await this.usersRepository.findOne(id);
 
     if (!user) {
@@ -48,31 +44,30 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<Partial<User>> {
     await this.findOne(id);
-    const data: Prisma.UserUpdateInput = {};
 
     if (updateUserDto.email) {
-      data.email = updateUserDto.email;
-    }
-
-    if (updateUserDto.password) {
-      data.password = await bcrypt.hash(updateUserDto.password, 10);
-    }
-
-    try {
-      return await this.usersRepository.update(id, data);
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException('Email already exists');
-        }
+      const existingUser = await this.findByEmail(updateUserDto.email);
+      if (existingUser && existingUser.id !== id) {
+        throw new ConflictException('Email already exists');
       }
-      throw error;
     }
+
+    const data: Prisma.UserUpdateInput = {
+      ...(updateUserDto.email && { email: updateUserDto.email }),
+      ...(updateUserDto.password && {
+        password: await bcrypt.hash(updateUserDto.password, 10),
+      }),
+    };
+
+    return this.usersRepository.update(id, data);
   }
 
-  async remove(id: string) {
+  async remove(id: string): Promise<User> {
     await this.findOne(id);
     return this.usersRepository.delete(id);
   }
