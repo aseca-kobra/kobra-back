@@ -1,13 +1,30 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersRepository } from './users.repository';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, User, Wallet } from '@prisma/client';
+
+type MockPrismaService = {
+  user: {
+    findUnique: jest.Mock;
+    findMany: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  wallet: {
+    create: jest.Mock;
+  };
+  $transaction: jest.Mock<
+    Promise<unknown>,
+    [(prisma: MockPrismaService) => Promise<unknown>]
+  >;
+};
 
 describe('UsersRepository', () => {
   let repository: UsersRepository;
-  let prismaService: PrismaService;
+  let _prismaService: PrismaService;
 
-  const mockPrismaService = {
+  const mockPrismaService: MockPrismaService = {
     user: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
@@ -33,7 +50,7 @@ describe('UsersRepository', () => {
     }).compile();
 
     repository = module.get<UsersRepository>(UsersRepository);
-    prismaService = module.get<PrismaService>(PrismaService);
+    _prismaService = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
@@ -47,7 +64,7 @@ describe('UsersRepository', () => {
   describe('findByEmail', () => {
     it('should return a user by email', async () => {
       const email = 'test@example.com';
-      const expectedUser = {
+      const expectedUser: User = {
         id: '1',
         email,
         password: 'hashed_password',
@@ -86,7 +103,7 @@ describe('UsersRepository', () => {
     it('should create a new user and wallet', async () => {
       const email = 'test@example.com';
       const hashedPassword = 'hashed_password';
-      const expectedUser = {
+      const expectedUser: User = {
         id: '1',
         email,
         password: hashedPassword,
@@ -94,12 +111,16 @@ describe('UsersRepository', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.create.mockResolvedValue(expectedUser);
-      mockPrismaService.wallet.create.mockResolvedValue({
+      const expectedWallet: Wallet = {
         id: '1',
         balance: 0,
         userId: expectedUser.id,
-      });
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.create.mockResolvedValue(expectedUser);
+      mockPrismaService.wallet.create.mockResolvedValue(expectedWallet);
 
       const result = await repository.create(email, hashedPassword);
 
@@ -133,10 +154,11 @@ describe('UsersRepository', () => {
 
   describe('findAll', () => {
     it('should return an array of users', async () => {
-      const expectedUsers = [
+      const expectedUsers: User[] = [
         {
           id: '1',
           email: 'test@example.com',
+          password: 'hashed_password',
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -161,9 +183,10 @@ describe('UsersRepository', () => {
   describe('findOne', () => {
     it('should return a user by id', async () => {
       const userId = '1';
-      const expectedUser = {
+      const expectedUser: User = {
         id: userId,
         email: 'test@example.com',
+        password: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -197,12 +220,13 @@ describe('UsersRepository', () => {
   describe('update', () => {
     it('should update a user', async () => {
       const userId = '1';
-      const updateData = {
+      const updateData: Prisma.UserUpdateInput = {
         email: 'updated@example.com',
       };
-      const expectedUser = {
+      const expectedUser: User = {
         id: userId,
         email: 'updated@example.com',
+        password: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -226,7 +250,7 @@ describe('UsersRepository', () => {
 
     it('should handle update errors', async () => {
       const userId = '1';
-      const updateData = {
+      const updateData: Prisma.UserUpdateInput = {
         email: 'existing@example.com',
       };
       const error = new Prisma.PrismaClientKnownRequestError(
@@ -240,16 +264,19 @@ describe('UsersRepository', () => {
 
       mockPrismaService.user.update.mockRejectedValue(error);
 
-      await expect(repository.update(userId, updateData)).rejects.toThrow(error);
+      await expect(repository.update(userId, updateData)).rejects.toThrow(
+        error,
+      );
     });
   });
 
   describe('delete', () => {
     it('should delete a user', async () => {
       const userId = '1';
-      const expectedUser = {
+      const expectedUser: User = {
         id: userId,
         email: 'test@example.com',
+        password: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -273,4 +300,4 @@ describe('UsersRepository', () => {
       await expect(repository.delete(userId)).rejects.toThrow('Delete failed');
     });
   });
-}); 
+});
