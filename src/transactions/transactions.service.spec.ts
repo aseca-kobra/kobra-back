@@ -1,43 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionsService } from './transactions.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { TransactionsRepository } from './transactions.repository';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { TransactionType, User, Wallet, Transaction } from '@prisma/client';
 
-type MockPrismaService = {
-  user: {
-    findUnique: jest.Mock;
-  };
-  wallet: {
-    update: jest.Mock;
-  };
-  transaction: {
-    create: jest.Mock;
-    findMany: jest.Mock;
-    findFirst: jest.Mock;
-  };
-  $transaction: jest.Mock<
-    Promise<unknown>,
-    [(prisma: MockPrismaService) => Promise<unknown>]
-  >;
-};
-
 describe('TransactionsService', () => {
   let service: TransactionsService;
+  let _repository: TransactionsRepository;
 
-  const mockPrismaService: MockPrismaService = {
-    user: {
-      findUnique: jest.fn(),
-    },
-    wallet: {
-      update: jest.fn(),
-    },
-    transaction: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
-    },
-    $transaction: jest.fn((callback) => callback(mockPrismaService)),
+  const mockRepository = {
+    findUserWithWallet: jest.fn(),
+    findRecipientWithWallet: jest.fn(),
+    createTransfer: jest.fn(),
+    findAllByWalletId: jest.fn(),
+    findOneByWalletId: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -45,13 +21,14 @@ describe('TransactionsService', () => {
       providers: [
         TransactionsService,
         {
-          provide: PrismaService,
-          useValue: mockPrismaService,
+          provide: TransactionsRepository,
+          useValue: mockRepository,
         },
       ],
     }).compile();
 
     service = module.get<TransactionsService>(TransactionsService);
+    _repository = module.get<TransactionsRepository>(TransactionsRepository);
   });
 
   afterEach(() => {
@@ -108,16 +85,20 @@ describe('TransactionsService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique
-        .mockResolvedValueOnce(mockSender)
-        .mockResolvedValueOnce(mockRecipient);
-      mockPrismaService.transaction.create.mockResolvedValue(mockTransaction);
+      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+      mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
+      mockRepository.createTransfer.mockResolvedValue(mockTransaction);
 
       const result = await service.create({ amount, recipientEmail }, senderId);
 
       expect(result).toEqual(mockTransaction);
-      expect(mockPrismaService.wallet.update).toHaveBeenCalledTimes(2);
-      expect(mockPrismaService.transaction.create).toHaveBeenCalledTimes(2);
+      expect(mockRepository.createTransfer).toHaveBeenCalledWith(
+        mockSender.wallet.id,
+        mockRecipient.wallet.id,
+        amount,
+        mockSender.id,
+        mockRecipient.id,
+      );
     });
 
     it('should throw NotFoundException if sender wallet not found', async () => {
@@ -125,7 +106,9 @@ describe('TransactionsService', () => {
       const recipientEmail = 'recipient@example.com';
       const amount = 100;
 
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockRepository.findUserWithWallet.mockRejectedValue(
+        new NotFoundException('Wallet not found for this user'),
+      );
 
       await expect(
         service.create({ amount, recipientEmail }, senderId),
@@ -152,9 +135,10 @@ describe('TransactionsService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique
-        .mockResolvedValueOnce(mockSender)
-        .mockResolvedValueOnce(null);
+      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+      mockRepository.findRecipientWithWallet.mockRejectedValue(
+        new NotFoundException('Recipient not found'),
+      );
 
       await expect(
         service.create({ amount, recipientEmail }, senderId),
@@ -196,9 +180,8 @@ describe('TransactionsService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique
-        .mockResolvedValueOnce(mockSender)
-        .mockResolvedValueOnce(mockRecipient);
+      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+      mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
 
       await expect(
         service.create({ amount, recipientEmail }, senderId),
@@ -236,23 +219,22 @@ describe('TransactionsService', () => {
         },
       ];
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.transaction.findMany.mockResolvedValue(
-        mockTransactions,
-      );
+      mockRepository.findUserWithWallet.mockResolvedValue(mockUser);
+      mockRepository.findAllByWalletId.mockResolvedValue(mockTransactions);
 
       const result = await service.findAll(userId);
 
       expect(result).toEqual(mockTransactions);
-      expect(mockPrismaService.transaction.findMany).toHaveBeenCalledWith({
-        where: { walletId: mockUser.wallet.id },
-        orderBy: { createdAt: 'desc' },
-      });
+      expect(mockRepository.findAllByWalletId).toHaveBeenCalledWith(
+        mockUser.wallet.id,
+      );
     });
 
     it('should throw NotFoundException if wallet not found', async () => {
       const userId = '1';
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockRepository.findUserWithWallet.mockRejectedValue(
+        new NotFoundException('Wallet not found for this user'),
+      );
 
       await expect(service.findAll(userId)).rejects.toThrow(NotFoundException);
     });
@@ -287,26 +269,24 @@ describe('TransactionsService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.transaction.findFirst.mockResolvedValue(
-        mockTransaction,
-      );
+      mockRepository.findUserWithWallet.mockResolvedValue(mockUser);
+      mockRepository.findOneByWalletId.mockResolvedValue(mockTransaction);
 
       const result = await service.findOne(transactionId, userId);
 
       expect(result).toEqual(mockTransaction);
-      expect(mockPrismaService.transaction.findFirst).toHaveBeenCalledWith({
-        where: {
-          id: transactionId,
-          walletId: mockUser.wallet.id,
-        },
-      });
+      expect(mockRepository.findOneByWalletId).toHaveBeenCalledWith(
+        transactionId,
+        mockUser.wallet.id,
+      );
     });
 
     it('should throw NotFoundException if wallet not found', async () => {
       const userId = '1';
       const transactionId = 'transaction1';
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockRepository.findUserWithWallet.mockRejectedValue(
+        new NotFoundException('Wallet not found for this user'),
+      );
 
       await expect(service.findOne(transactionId, userId)).rejects.toThrow(
         NotFoundException,
@@ -331,8 +311,8 @@ describe('TransactionsService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.transaction.findFirst.mockResolvedValue(null);
+      mockRepository.findUserWithWallet.mockResolvedValue(mockUser);
+      mockRepository.findOneByWalletId.mockResolvedValue(null);
 
       await expect(service.findOne(transactionId, userId)).rejects.toThrow(
         NotFoundException,

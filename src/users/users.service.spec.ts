@@ -3,7 +3,6 @@ import { UsersService } from './users.service';
 import { UsersRepository } from './users.repository';
 import * as bcrypt from 'bcrypt';
 import { NotFoundException, ConflictException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 
 // Mock the bcrypt module
 jest.mock('bcrypt', () => ({
@@ -82,16 +81,9 @@ describe('UsersService', () => {
         password: 'password123',
       };
 
-      const prismaError = new Prisma.PrismaClientKnownRequestError(
-        'Unique constraint failed',
-        {
-          code: 'P2002',
-          clientVersion: '5.0.0',
-          meta: { target: ['email'] },
-        },
-      );
+      const error = new ConflictException();
 
-      mockRepository.create.mockRejectedValue(prismaError);
+      mockRepository.create.mockRejectedValue(error);
 
       await expect(service.create(createUserDto)).rejects.toThrow(
         ConflictException,
@@ -223,17 +215,10 @@ describe('UsersService', () => {
         email: 'existing@example.com',
       };
 
-      const prismaError = new Prisma.PrismaClientKnownRequestError(
-        'Unique constraint failed',
-        {
-          code: 'P2002',
-          clientVersion: '5.0.0',
-          meta: { target: ['email'] },
-        },
-      );
+      const error = new ConflictException();
 
       mockRepository.findOne.mockResolvedValue({ id: userId });
-      mockRepository.update.mockRejectedValue(prismaError);
+      mockRepository.update.mockRejectedValue(error);
 
       await expect(service.update(userId, updateUserDto)).rejects.toThrow(
         ConflictException,

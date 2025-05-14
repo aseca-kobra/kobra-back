@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersRepository } from './users.repository';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User, Wallet } from '@prisma/client';
+import { ConflictException } from '@nestjs/common';
 
 type MockPrismaService = {
   user: {
