@@ -3,80 +3,39 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
-import { Prisma } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
+import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private usersRepository: UsersRepository) {}
 
-  async findByEmail(email: string) {
-    return this.prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        password: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+  async findByEmail(email: string): Promise<User | null> {
+    return this.usersRepository.findByEmail(email);
   }
 
-  async create(createUserDto: CreateUserDto) {
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    try {
-      return await this.prisma.$transaction(async (prisma) => {
-        const user = await prisma.user.create({
-          data: {
-            email: createUserDto.email,
-            password: hashedPassword,
-          },
-        });
-
-        await prisma.wallet.create({
-          data: {
-            balance: 0,
-            userId: user.id,
-          },
-        });
-
-        return user;
-      });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException('Email already exists');
-        }
-      }
-      throw error;
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    const existingUser = await this.findByEmail(createUserDto.email);
+    if (existingUser) {
+      throw new ConflictException('Email already exists');
     }
+
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    return await this.usersRepository.create(
+      createUserDto.email,
+      hashedPassword,
+    );
   }
 
-  findAll() {
-    return this.prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+  findAll(): Promise<Partial<User>[]> {
+    return this.usersRepository.findAll();
   }
 
-  async findOne(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+  async findOne(id: string): Promise<Partial<User>> {
+    const user = await this.usersRepository.findOne(id);
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -85,44 +44,31 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<Partial<User>> {
     await this.findOne(id);
-    const data: Prisma.UserUpdateInput = {};
 
     if (updateUserDto.email) {
-      data.email = updateUserDto.email;
-    }
-
-    if (updateUserDto.password) {
-      data.password = await bcrypt.hash(updateUserDto.password, 10);
-    }
-
-    try {
-      return await this.prisma.user.update({
-        where: { id },
-        data,
-        select: {
-          id: true,
-          email: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException('Email already exists');
-        }
+      const existingUser = await this.findByEmail(updateUserDto.email);
+      if (existingUser && existingUser.id !== id) {
+        throw new ConflictException('Email already exists');
       }
-      throw error;
     }
+
+    const data: Prisma.UserUpdateInput = {
+      ...(updateUserDto.email && { email: updateUserDto.email }),
+      ...(updateUserDto.password && {
+        password: await bcrypt.hash(updateUserDto.password, 10),
+      }),
+    };
+
+    return this.usersRepository.update(id, data);
   }
 
-  async remove(id: string) {
+  async remove(id: string): Promise<User> {
     await this.findOne(id);
-
-    return this.prisma.user.delete({
-      where: { id },
-    });
+    return this.usersRepository.delete(id);
   }
 }
