@@ -1,39 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WalletService } from './wallet.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { TransactionType, User, Wallet } from '@prisma/client';
-
-type MockPrismaService = {
-  user: {
-    findUnique: jest.Mock;
-  };
-  wallet: {
-    update: jest.Mock;
-  };
-  transaction: {
-    create: jest.Mock;
-  };
-  $transaction: jest.Mock<
-    Promise<unknown>,
-    [(prisma: MockPrismaService) => Promise<unknown>]
-  >;
-};
+import { WalletRepository } from './wallet.repository';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Wallet } from '@prisma/client';
 
 describe('WalletService', () => {
   let service: WalletService;
+  let _repository: WalletRepository;
 
-  const mockPrismaService: MockPrismaService = {
-    user: {
-      findUnique: jest.fn(),
-    },
-    wallet: {
-      update: jest.fn(),
-    },
-    transaction: {
-      create: jest.fn(),
-    },
-    $transaction: jest.fn((callback) => callback(mockPrismaService)),
+  const mockRepository = {
+    findByUserId: jest.fn(),
+    deposit: jest.fn(),
+    extract: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -41,13 +19,14 @@ describe('WalletService', () => {
       providers: [
         WalletService,
         {
-          provide: PrismaService,
-          useValue: mockPrismaService,
+          provide: WalletRepository,
+          useValue: mockRepository,
         },
       ],
     }).compile();
 
     service = module.get<WalletService>(WalletService);
+    _repository = module.get<WalletRepository>(WalletRepository);
   });
 
   afterEach(() => {
@@ -61,35 +40,25 @@ describe('WalletService', () => {
   describe('getBalance', () => {
     it('should return wallet balance', async () => {
       const userId = '1';
-      const mockUser: User & { wallet: Wallet } = {
-        id: userId,
-        wallet: {
-          id: 'wallet1',
-          balance: 100,
-          userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'user@example.com',
-        password: 'hashedPassword',
+      const mockWallet: Wallet = {
+        id: 'wallet1',
+        balance: 100,
+        userId,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockRepository.findByUserId.mockResolvedValue(mockWallet);
 
       const result = await service.getBalance(userId);
 
       expect(result).toEqual({ balance: 100 });
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: userId },
-        include: { wallet: true },
-      });
+      expect(mockRepository.findByUserId).toHaveBeenCalledWith(userId);
     });
 
     it('should throw NotFoundException if wallet not found', async () => {
-      const userId = '1';
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      const userId = '999';
+      mockRepository.findByUserId.mockResolvedValue(null);
 
       await expect(service.getBalance(userId)).rejects.toThrow(
         NotFoundException,
@@ -101,52 +70,30 @@ describe('WalletService', () => {
     it('should deposit money to wallet', async () => {
       const userId = '1';
       const amount = 100;
-      const mockUser: User & { wallet: Wallet } = {
-        id: userId,
-        wallet: {
-          id: 'wallet1',
-          balance: 0,
-          userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'user@example.com',
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const updatedWallet: Wallet = {
+      const mockWallet: Wallet = {
         id: 'wallet1',
-        balance: 100,
+        balance: 200,
         userId,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.wallet.update.mockResolvedValue(updatedWallet);
+      mockRepository.findByUserId.mockResolvedValue(mockWallet);
+      mockRepository.deposit.mockResolvedValue(mockWallet);
 
       const result = await service.deposit(userId, amount);
 
-      expect(result).toEqual(updatedWallet);
-      expect(mockPrismaService.wallet.update).toHaveBeenCalledWith({
-        where: { id: mockUser.wallet.id },
-        data: { balance: { increment: amount } },
-      });
-      expect(mockPrismaService.transaction.create).toHaveBeenCalledWith({
-        data: {
-          amount,
-          type: TransactionType.DEPOSIT,
-          walletId: mockUser.wallet.id,
-        },
-      });
+      expect(result).toEqual(mockWallet);
+      expect(mockRepository.deposit).toHaveBeenCalledWith(
+        mockWallet.id,
+        amount,
+      );
     });
 
     it('should throw NotFoundException if wallet not found', async () => {
-      const userId = '1';
+      const userId = '999';
       const amount = 100;
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockRepository.findByUserId.mockResolvedValue(null);
 
       await expect(service.deposit(userId, amount)).rejects.toThrow(
         NotFoundException,
@@ -157,53 +104,37 @@ describe('WalletService', () => {
   describe('extract', () => {
     it('should extract money from wallet', async () => {
       const userId = '1';
-      const amount = 50;
-      const mockUser: User & { wallet: Wallet } = {
-        id: userId,
-        wallet: {
-          id: 'wallet1',
-          balance: 100,
-          userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'user@example.com',
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const updatedWallet: Wallet = {
+      const amount = 100;
+      const mockWallet: Wallet = {
         id: 'wallet1',
-        balance: 50,
+        balance: 200,
         userId,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.wallet.update.mockResolvedValue(updatedWallet);
+      mockRepository.findByUserId.mockResolvedValue(mockWallet);
+      mockRepository.extract.mockResolvedValue({
+        ...mockWallet,
+        balance: mockWallet.balance - amount,
+      });
 
       const result = await service.extract(userId, amount);
 
-      expect(result).toEqual(updatedWallet);
-      expect(mockPrismaService.wallet.update).toHaveBeenCalledWith({
-        where: { id: mockUser.wallet.id },
-        data: { balance: { decrement: amount } },
+      expect(result).toEqual({
+        ...mockWallet,
+        balance: mockWallet.balance - amount,
       });
-      expect(mockPrismaService.transaction.create).toHaveBeenCalledWith({
-        data: {
-          amount,
-          type: TransactionType.WITHDRAWAL,
-          walletId: mockUser.wallet.id,
-        },
-      });
+      expect(mockRepository.extract).toHaveBeenCalledWith(
+        mockWallet.id,
+        amount,
+      );
     });
 
     it('should throw NotFoundException if wallet not found', async () => {
-      const userId = '1';
-      const amount = 50;
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      const userId = '999';
+      const amount = 100;
+      mockRepository.findByUserId.mockResolvedValue(null);
 
       await expect(service.extract(userId, amount)).rejects.toThrow(
         NotFoundException,
@@ -212,23 +143,16 @@ describe('WalletService', () => {
 
     it('should throw BadRequestException if insufficient balance', async () => {
       const userId = '1';
-      const amount = 150;
-      const mockUser: User & { wallet: Wallet } = {
-        id: userId,
-        wallet: {
-          id: 'wallet1',
-          balance: 100,
-          userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'user@example.com',
-        password: 'hashedPassword',
+      const amount = 300;
+      const mockWallet: Wallet = {
+        id: 'wallet1',
+        balance: 200,
+        userId,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockRepository.findByUserId.mockResolvedValue(mockWallet);
 
       await expect(service.extract(userId, amount)).rejects.toThrow(
         BadRequestException,
