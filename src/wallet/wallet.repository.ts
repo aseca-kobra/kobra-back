@@ -33,23 +33,4 @@ export class WalletRepository {
       return updatedWallet;
     });
   }
-
-  async extract(walletId: string, amount: number): Promise<Wallet> {
-    return this.prisma.$transaction(async (tx) => {
-      const updatedWallet = await tx.wallet.update({
-        where: { id: walletId },
-        data: { balance: { decrement: amount } },
-      });
-
-      await tx.transaction.create({
-        data: {
-          amount,
-          type: TransactionType.WITHDRAWAL,
-          walletId,
-        },
-      });
-
-      return updatedWallet;
-    });
-  }
 }

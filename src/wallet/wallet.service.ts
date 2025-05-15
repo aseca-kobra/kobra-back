@@ -28,18 +28,4 @@ export class WalletService {
 
     return this.walletRepository.deposit(wallet.id, amount);
   }
-
-  async extract(userId: string, amount: number): Promise<Wallet> {
-    const wallet = await this.walletRepository.findByUserId(userId);
-
-    if (!wallet) {
-      throw new NotFoundException('Wallet not found for this user');
-    }
-
-    if (wallet.balance < amount) {
-      throw new BadRequestException('Insufficient balance');
-    }
-
-    return this.walletRepository.extract(wallet.id, amount);
-  }
 }

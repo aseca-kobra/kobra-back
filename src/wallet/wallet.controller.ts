@@ -29,12 +29,4 @@ export class WalletController {
   ): Promise<Wallet> {
     return this.walletService.deposit(req.user.userId, dto.amount);
   }
-
-  @Post('withdraw')
-  async withdraw(
-    @Request() req: RequestWithUser,
-    @Body() dto: WalletAmountDto,
-  ): Promise<Wallet> {
-    return this.walletService.extract(req.user.userId, dto.amount);
-  }
 }
