@@ -29,4 +29,12 @@ export class WalletController {
   ): Promise<Wallet> {
     return this.walletService.deposit(req.user.userId, dto.amount);
   }
+
+  @Post('debin')
+  async requestDebin(
+    @Request() req: RequestWithUser,
+    @Body() dto: WalletAmountDto,
+  ): Promise<Wallet> {
+    return this.walletService.requestDebin(req.user.userId, dto.amount);
+  }
 }

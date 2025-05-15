@@ -11,7 +11,7 @@ describe('WalletController', () => {
   const mockWalletService = {
     getBalance: jest.fn(),
     deposit: jest.fn(),
-    extract: jest.fn(),
+    requestDebin: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -68,22 +68,6 @@ describe('WalletController', () => {
 
       expect(result).toEqual(expectedWallet);
       expect(mockWalletService.deposit).toHaveBeenCalledWith(userId, amount);
-    });
-  });
-
-  describe('withdraw', () => {
-    it('should withdraw money from wallet', async () => {
-      const userId = '1';
-      const amount = 50;
-      const mockRequest = { user: { userId } } as RequestWithUser;
-      const expectedWallet = { id: 'wallet1', balance: 50 };
-
-      mockWalletService.extract.mockResolvedValue(expectedWallet);
-
-      const result = await controller.withdraw(mockRequest, { amount });
-
-      expect(result).toEqual(expectedWallet);
-      expect(mockWalletService.extract).toHaveBeenCalledWith(userId, amount);
     });
   });
 });

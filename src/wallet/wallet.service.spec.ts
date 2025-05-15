@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WalletService } from './wallet.service';
 import { WalletRepository } from './wallet.repository';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { Wallet } from '@prisma/client';
 
 describe('WalletService', () => {
@@ -11,7 +11,6 @@ describe('WalletService', () => {
   const mockRepository = {
     findByUserId: jest.fn(),
     deposit: jest.fn(),
-    extract: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -97,65 +96,6 @@ describe('WalletService', () => {
 
       await expect(service.deposit(userId, amount)).rejects.toThrow(
         NotFoundException,
-      );
-    });
-  });
-
-  describe('extract', () => {
-    it('should extract money from wallet', async () => {
-      const userId = '1';
-      const amount = 100;
-      const mockWallet: Wallet = {
-        id: 'wallet1',
-        balance: 200,
-        userId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockRepository.findByUserId.mockResolvedValue(mockWallet);
-      mockRepository.extract.mockResolvedValue({
-        ...mockWallet,
-        balance: mockWallet.balance - amount,
-      });
-
-      const result = await service.extract(userId, amount);
-
-      expect(result).toEqual({
-        ...mockWallet,
-        balance: mockWallet.balance - amount,
-      });
-      expect(mockRepository.extract).toHaveBeenCalledWith(
-        mockWallet.id,
-        amount,
-      );
-    });
-
-    it('should throw NotFoundException if wallet not found', async () => {
-      const userId = '999';
-      const amount = 100;
-      mockRepository.findByUserId.mockResolvedValue(null);
-
-      await expect(service.extract(userId, amount)).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('should throw BadRequestException if insufficient balance', async () => {
-      const userId = '1';
-      const amount = 300;
-      const mockWallet: Wallet = {
-        id: 'wallet1',
-        balance: 200,
-        userId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockRepository.findByUserId.mockResolvedValue(mockWallet);
-
-      await expect(service.extract(userId, amount)).rejects.toThrow(
-        BadRequestException,
       );
     });
   });
