@@ -23,8 +23,8 @@ export class WalletService {
     return { balance: wallet.balance };
   }
 
-  async deposit(userId: string, amount: number): Promise<Wallet> {
-    const wallet = await this.walletRepository.findByUserId(userId);
+  async deposit(walletId: string, amount: number): Promise<Wallet> {
+    const wallet = await this.walletRepository.find(walletId);
 
     if (!wallet) {
       throw new NotFoundException('Wallet not found for this user');
@@ -33,8 +33,8 @@ export class WalletService {
     return this.walletRepository.deposit(wallet.id, amount);
   }
 
-  async requestDebin(userId: string, amount: number): Promise<Wallet> {
-    const wallet = await this.walletRepository.findByUserId(userId);
+  async requestDebin(walletId: string, amount: number): Promise<Wallet> {
+    const wallet = await this.walletRepository.find(walletId);
 
     if (!wallet) {
       throw new NotFoundException('Wallet not found for this user');

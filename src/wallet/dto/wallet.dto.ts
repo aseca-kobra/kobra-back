@@ -1,6 +1,10 @@
-import { IsNumber, IsPositive } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsPositive, IsUUID } from 'class-validator';
 
-export class WalletAmountDto {
+export class WalletOperationDto {
+  @IsUUID()
+  @IsNotEmpty()
+  walletId: string;
+
   @IsNumber()
   @IsPositive()
   amount: number;

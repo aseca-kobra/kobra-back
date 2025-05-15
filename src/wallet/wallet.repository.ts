@@ -6,13 +6,22 @@ import { TransactionType, Wallet } from '@prisma/client';
 export class WalletRepository {
   constructor(private prisma: PrismaService) {}
 
-  async findByUserId(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { wallet: true },
+  async find(walletId: string): Promise<Wallet | null> {
+    return this.prisma.wallet.findUnique({
+      where: { id: walletId },
     });
+  }
 
-    return user?.wallet ?? null;
+  async findByUserId(userId: string): Promise<Partial<Wallet> | null> {
+    return this.prisma.wallet.findFirst({
+      where: { userId },
+      select: {
+        id: true,
+        balance: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
   }
 
   async deposit(walletId: string, amount: number): Promise<Wallet> {
