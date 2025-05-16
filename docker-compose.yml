@@ -6,8 +6,10 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://postgres:password@kobra-back-db:5432/postgres
+      - EXTERNAL_API_URL=http://kobra-sim-bank:3002
     depends_on:
       - kobra-back-db
+
   kobra-back-db:
     image: postgres:alpine
     container_name: kobra-back-db
@@ -20,5 +22,13 @@ services:
       - '5433:5432'
     volumes:
       - kobra-db-data:/var/lib/postgresql/data
+
+  kobra-sim-bank:
+    image: ghcr.io/aseca-kobra/sim-bank:latest
+    container_name: kobra-sim-bank
+    ports:
+      - "3002:3002"
+    environment:
+      - BASE_URL=http://kobra-back-app:3000
 volumes:
   kobra-db-data:
