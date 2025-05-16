@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WalletRepository } from './wallet.repository';
 import { PrismaService } from '../prisma/prisma.service';
-import { TransactionType, User, Wallet } from '@prisma/client';
+import { TransactionType, Wallet } from '@prisma/client';
 
 type MockPrismaService = {
   user: {
