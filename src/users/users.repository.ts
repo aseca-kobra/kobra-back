@@ -15,6 +15,14 @@ export class UsersRepository {
         password: true,
         createdAt: true,
         updatedAt: true,
+        wallet: {
+          select: {
+            id: true,
+            balance: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
       },
     });
   }

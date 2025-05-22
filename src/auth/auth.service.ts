@@ -3,6 +3,11 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from '../users/dto/create-user.dto';
+import { User, Wallet } from '@prisma/client';
+
+interface UserWithWallet extends Omit<User, 'password'> {
+  wallet?: Wallet;
+}
 
 @Injectable()
 export class AuthService {
@@ -11,11 +16,14 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, password: string) {
+  async validateUser(
+    email: string,
+    password: string,
+  ): Promise<UserWithWallet | null> {
     const user = await this.usersService.findByEmail(email);
     if (user && (await bcrypt.compare(password, user.password))) {
       const { password: _password, ...result } = user;
-      return result;
+      return result as UserWithWallet;
     }
     return null;
   }
@@ -29,7 +37,10 @@ export class AuthService {
     const payload = { email: user.email, sub: user.id };
     return {
       access_token: this.jwtService.sign(payload),
-      user,
+      user: {
+        ...user,
+        wallet: user.wallet,
+      },
     };
   }
 
