@@ -2,6 +2,13 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+
+## Docker compose
+### Hacer migration dentro de docker
+```bash
+$ docker exec -it kobra-back-app npx prisma migrate deploy
+```
+
 ## Project setup
 
 ```bash
