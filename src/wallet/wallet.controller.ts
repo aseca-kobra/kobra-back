@@ -11,8 +11,10 @@ import { WalletOperationDto } from './dto/wallet.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequestWithUser } from '../common/types/request.types';
 import { Wallet } from '@prisma/client';
+import { WalletGuard } from './guard/wallet.guard';
 
 @Controller('wallet')
+@UseGuards(JwtAuthGuard, WalletGuard)
 export class WalletController {
   constructor(private walletService: WalletService) {}
 
@@ -28,7 +30,10 @@ export class WalletController {
   }
 
   @Post('debin')
-  async requestDebin(@Body() dto: WalletOperationDto): Promise<Wallet> {
-    return this.walletService.requestDebin(dto.walletId, dto.amount);
+  async requestDebin(
+    @Body() dto: WalletOperationDto,
+    @Request() req: RequestWithUser,
+  ): Promise<Wallet> {
+    return this.walletService.requestDebin(dto.amount, req.user.userId);
   }
 }
