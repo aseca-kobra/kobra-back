@@ -258,9 +258,6 @@ describe('TransactionsRepository', () => {
       expect(mockPrismaService.transaction.findMany).toHaveBeenCalledWith({
         where: {
           walletId,
-          relatedUserId: {
-            not: null,
-          },
         },
         orderBy: { createdAt: 'desc' },
         include: {
