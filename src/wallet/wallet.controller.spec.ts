@@ -6,6 +6,7 @@ import { RequestWithUser } from '../common/types/request.types';
 import { WalletOperationDto } from './dto/wallet.dto';
 import { Wallet } from '@prisma/client';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { WalletGuard } from './guard/wallet.guard';
 
 describe('WalletController', () => {
   let controller: WalletController;
@@ -28,6 +29,8 @@ describe('WalletController', () => {
       ],
     })
       .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(WalletGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
@@ -76,6 +79,8 @@ describe('WalletController', () => {
 
   describe('requestDebin', () => {
     it('should successfully process a DEBIN request', async () => {
+      const userId = '1';
+      const mockRequest = { user: { userId } } as RequestWithUser;
       const dto: WalletOperationDto = {
         walletId: 'wallet1',
         amount: 100,
@@ -90,16 +95,18 @@ describe('WalletController', () => {
 
       mockWalletService.requestDebin.mockResolvedValue(mockWallet);
 
-      const result = await controller.requestDebin(dto);
+      const result = await controller.requestDebin(dto, mockRequest);
 
       expect(result).toEqual(mockWallet);
       expect(mockWalletService.requestDebin).toHaveBeenCalledWith(
-        dto.walletId,
         dto.amount,
+        userId,
       );
     });
 
     it('should throw NotFoundException if wallet not found', async () => {
+      const userId = '1';
+      const mockRequest = { user: { userId } } as RequestWithUser;
       const dto: WalletOperationDto = {
         walletId: '999',
         amount: 100,
@@ -109,12 +116,14 @@ describe('WalletController', () => {
         new NotFoundException('Wallet not found for this user'),
       );
 
-      await expect(controller.requestDebin(dto)).rejects.toThrow(
+      await expect(controller.requestDebin(dto, mockRequest)).rejects.toThrow(
         NotFoundException,
       );
     });
 
     it('should throw BadRequestException if DEBIN request fails', async () => {
+      const userId = '1';
+      const mockRequest = { user: { userId } } as RequestWithUser;
       const dto: WalletOperationDto = {
         walletId: 'wallet1',
         amount: 100,
@@ -124,7 +133,7 @@ describe('WalletController', () => {
         new BadRequestException('Failed to process DEBIN request'),
       );
 
-      await expect(controller.requestDebin(dto)).rejects.toThrow(
+      await expect(controller.requestDebin(dto, mockRequest)).rejects.toThrow(
         BadRequestException,
       );
     });
