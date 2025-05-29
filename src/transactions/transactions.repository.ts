@@ -82,7 +82,6 @@ export class TransactionsRepository {
     return this.prisma.transaction.findMany({
       where: {
         walletId,
-        relatedUserId: { not: null },
       },
       orderBy: { createdAt: 'desc' },
       include: {
