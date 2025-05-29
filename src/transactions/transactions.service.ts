@@ -6,6 +6,7 @@ import {
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { TransactionsRepository } from './transactions.repository';
 import { Transaction } from '@prisma/client';
+import { TransactionWithRelatedUser } from './types/transaction.types';
 
 @Injectable()
 export class TransactionsService {
@@ -33,12 +34,15 @@ export class TransactionsService {
     );
   }
 
-  async findAll(userId: string): Promise<Transaction[]> {
+  async findAll(userId: string): Promise<TransactionWithRelatedUser[]> {
     const user = await this.transactionsRepository.findUserWithWallet(userId);
     return this.transactionsRepository.findAllByWalletId(user.wallet!.id);
   }
 
-  async findOne(id: string, userId: string): Promise<Transaction> {
+  async findOne(
+    id: string,
+    userId: string,
+  ): Promise<TransactionWithRelatedUser> {
     const user = await this.transactionsRepository.findUserWithWallet(userId);
     const transaction = await this.transactionsRepository.findOneByWalletId(
       id,

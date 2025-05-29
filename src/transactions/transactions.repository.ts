@@ -76,21 +76,41 @@ export class TransactionsRepository {
     });
   }
 
-  async findAllByWalletId(walletId: string): Promise<Transaction[]> {
+  async findAllByWalletId(
+    walletId: string,
+  ): Promise<(Transaction & { relatedUser: { email: string } | null })[]> {
     return this.prisma.transaction.findMany({
-      where: { walletId },
+      where: {
+        walletId,
+        relatedUserId: { not: null },
+      },
       orderBy: { createdAt: 'desc' },
+      include: {
+        relatedUser: {
+          select: {
+            email: true,
+          },
+        },
+      },
     });
   }
 
   async findOneByWalletId(
     id: string,
     walletId: string,
-  ): Promise<Transaction | null> {
+  ): Promise<(Transaction & { relatedUser: { email: string } | null }) | null> {
     return this.prisma.transaction.findFirst({
       where: {
         id,
         walletId,
+        relatedUserId: { not: null },
+      },
+      include: {
+        relatedUser: {
+          select: {
+            email: true,
+          },
+        },
       },
     });
   }

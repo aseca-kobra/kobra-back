@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TransactionOwnerGuard } from './guards/transaction-owner.guard';
 import { RequestWithUser } from '../common/types/request.types';
 import { Transaction } from '@prisma/client';
+import { TransactionWithRelatedUser } from './types/transaction.types';
 
 @Controller('transactions')
 @UseGuards(JwtAuthGuard, TransactionOwnerGuard)
@@ -31,7 +32,9 @@ export class TransactionsController {
   }
 
   @Get()
-  findAll(@Request() req: RequestWithUser): Promise<Transaction[]> {
+  findAll(
+    @Request() req: RequestWithUser,
+  ): Promise<TransactionWithRelatedUser[]> {
     return this.transactionsService.findAll(req.user.userId);
   }
 
@@ -39,7 +42,7 @@ export class TransactionsController {
   findOne(
     @Param('id') id: string,
     @Request() req: RequestWithUser,
-  ): Promise<Transaction> {
+  ): Promise<TransactionWithRelatedUser> {
     return this.transactionsService.findOne(id, req.user.userId);
   }
 }
