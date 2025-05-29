@@ -1,8 +1,8 @@
-import { IsNotEmpty, IsNumber, IsPositive, IsUUID } from 'class-validator';
+import { IsNumber, IsOptional, IsPositive, IsUUID } from 'class-validator';
 
 export class WalletOperationDto {
   @IsUUID()
-  @IsNotEmpty()
+  @IsOptional()
   walletId: string;
 
   @IsNumber()
