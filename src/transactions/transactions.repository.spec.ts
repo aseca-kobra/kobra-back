@@ -256,8 +256,20 @@ describe('TransactionsRepository', () => {
 
       expect(result).toEqual(mockTransactions);
       expect(mockPrismaService.transaction.findMany).toHaveBeenCalledWith({
-        where: { walletId },
+        where: {
+          walletId,
+          relatedUserId: {
+            not: null,
+          },
+        },
         orderBy: { createdAt: 'desc' },
+        include: {
+          relatedUser: {
+            select: {
+              email: true,
+            },
+          },
+        },
       });
     });
   });
@@ -283,10 +295,19 @@ describe('TransactionsRepository', () => {
       const result = await repository.findOneByWalletId(id, walletId);
 
       expect(result).toEqual(mockTransaction);
+
       expect(mockPrismaService.transaction.findFirst).toHaveBeenCalledWith({
         where: {
           id,
           walletId,
+          relatedUserId: { not: null },
+        },
+        include: {
+          relatedUser: {
+            select: {
+              email: true,
+            },
+          },
         },
       });
     });
