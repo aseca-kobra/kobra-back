@@ -9,7 +9,6 @@ import {
 } from './dto/wallet.dto';
 import { Wallet } from '@prisma/client';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { WalletGuard } from './guard/wallet.guard';
 
 describe('WalletController', () => {
   let controller: WalletController;
@@ -32,8 +31,6 @@ describe('WalletController', () => {
       ],
     })
       .overrideGuard(JwtAuthGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(WalletGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
