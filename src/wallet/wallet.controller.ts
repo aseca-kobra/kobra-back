@@ -7,14 +7,15 @@ import {
   Request,
 } from '@nestjs/common';
 import { WalletService } from './wallet.service';
-import { WalletOperationDto } from './dto/wallet.dto';
+import {
+  ExternalWalletOperationDto,
+  WalletOperationDto,
+} from './dto/wallet.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequestWithUser } from '../common/types/request.types';
 import { Wallet } from '@prisma/client';
-import { WalletGuard } from './guard/wallet.guard';
 
 @Controller('wallet')
-@UseGuards(JwtAuthGuard, WalletGuard)
 export class WalletController {
   constructor(private walletService: WalletService) {}
 
@@ -25,15 +26,17 @@ export class WalletController {
   }
 
   @Post('deposit')
-  async deposit(@Body() dto: WalletOperationDto): Promise<Wallet> {
-    return this.walletService.deposit(dto.walletId, dto.amount);
+  // We could add an API key guard here if needed
+  async deposit(@Body() dto: ExternalWalletOperationDto): Promise<Wallet> {
+    return this.walletService.deposit(dto.email, dto.amount);
   }
 
   @Post('debin')
+  @UseGuards(JwtAuthGuard)
   async requestDebin(
     @Body() dto: WalletOperationDto,
     @Request() req: RequestWithUser,
   ): Promise<Wallet> {
-    return this.walletService.requestDebin(dto.amount, req.user.userId);
+    return this.walletService.requestDebin(req.user.email, dto.amount);
   }
 }

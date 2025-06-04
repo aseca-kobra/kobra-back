@@ -15,7 +15,10 @@ export class ExternalApiService {
     private readonly configService: ConfigService,
   ) {}
 
-  async requestDebin(amount: number): Promise<ExternalApiResponse> {
+  async requestDebin(
+    email: string,
+    amount: number,
+  ): Promise<ExternalApiResponse> {
     const externalApiUrl = this.configService.get<string>('EXTERNAL_API_URL');
     if (!externalApiUrl) {
       throw new NotFoundException('External API URL not configured');
@@ -24,7 +27,7 @@ export class ExternalApiService {
     const response = await firstValueFrom(
       this.httpService.post(
         `${externalApiUrl}/debin`,
-        { amount },
+        { email, amount },
         {
           headers: {
             'Content-Type': 'application/json',

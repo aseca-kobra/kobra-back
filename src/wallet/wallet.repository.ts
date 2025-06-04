@@ -24,6 +24,18 @@ export class WalletRepository {
     });
   }
 
+  async findByUserEmail(email: string): Promise<Partial<Wallet> | null> {
+    return this.prisma.wallet.findFirst({
+      where: { user: { email } },
+      select: {
+        id: true,
+        balance: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
   async deposit(walletId: string, amount: number): Promise<Wallet> {
     return this.prisma.$transaction(async (tx) => {
       const updatedWallet = await tx.wallet.update({
