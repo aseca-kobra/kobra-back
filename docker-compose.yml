@@ -29,6 +29,6 @@ services:
     ports:
       - "3002:3002"
     environment:
-      - BASE_URL=http://kobra-back-app:3000
+      - BACK_API_URL=http://kobra-back-app:3000
 volumes:
   kobra-db-data:

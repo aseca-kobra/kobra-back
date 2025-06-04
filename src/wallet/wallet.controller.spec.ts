@@ -3,10 +3,12 @@ import { WalletController } from './wallet.controller';
 import { WalletService } from './wallet.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequestWithUser } from '../common/types/request.types';
-import { WalletOperationDto } from './dto/wallet.dto';
+import {
+  ExternalWalletOperationDto,
+  WalletOperationDto,
+} from './dto/wallet.dto';
 import { Wallet } from '@prisma/client';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { WalletGuard } from './guard/wallet.guard';
 
 describe('WalletController', () => {
   let controller: WalletController;
@@ -29,8 +31,6 @@ describe('WalletController', () => {
       ],
     })
       .overrideGuard(JwtAuthGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(WalletGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
@@ -63,30 +63,27 @@ describe('WalletController', () => {
 
   describe('deposit', () => {
     it('should deposit money to wallet', async () => {
-      const walletId = 'walletId';
+      const email = 'test@example.com';
       const amount = 100;
-      const mockRequest = { walletId, amount } as WalletOperationDto;
+      const dto: ExternalWalletOperationDto = { email, amount };
       const expectedWallet = { id: 'wallet1', balance: 100 };
 
       mockWalletService.deposit.mockResolvedValue(expectedWallet);
 
-      const result = await controller.deposit(mockRequest);
+      const result = await controller.deposit(dto);
 
       expect(result).toEqual(expectedWallet);
-      expect(mockWalletService.deposit).toHaveBeenCalledWith(walletId, amount);
+      expect(mockWalletService.deposit).toHaveBeenCalledWith(email, amount);
     });
   });
 
   describe('requestDebin', () => {
     it('should successfully process a DEBIN request', async () => {
-      const userId = '1';
-      const mockRequest = { user: { userId } } as RequestWithUser;
-      const dto: WalletOperationDto = {
-        walletId: 'wallet1',
-        amount: 100,
-      };
+      const email = 'test@example.com';
+      const mockRequest = { user: { email } } as RequestWithUser;
+      const dto: WalletOperationDto = { amount: 100 };
       const mockWallet: Wallet = {
-        id: dto.walletId,
+        id: 'wallet1',
         balance: 200,
         userId: '1',
         createdAt: new Date(),
@@ -99,18 +96,15 @@ describe('WalletController', () => {
 
       expect(result).toEqual(mockWallet);
       expect(mockWalletService.requestDebin).toHaveBeenCalledWith(
+        email,
         dto.amount,
-        userId,
       );
     });
 
     it('should throw NotFoundException if wallet not found', async () => {
-      const userId = '1';
-      const mockRequest = { user: { userId } } as RequestWithUser;
-      const dto: WalletOperationDto = {
-        walletId: '999',
-        amount: 100,
-      };
+      const email = 'nonexistent@example.com';
+      const mockRequest = { user: { email } } as RequestWithUser;
+      const dto: WalletOperationDto = { amount: 100 };
 
       mockWalletService.requestDebin.mockRejectedValue(
         new NotFoundException('Wallet not found for this user'),
@@ -122,12 +116,9 @@ describe('WalletController', () => {
     });
 
     it('should throw BadRequestException if DEBIN request fails', async () => {
-      const userId = '1';
-      const mockRequest = { user: { userId } } as RequestWithUser;
-      const dto: WalletOperationDto = {
-        walletId: 'wallet1',
-        amount: 100,
-      };
+      const email = 'test@example.com';
+      const mockRequest = { user: { email } } as RequestWithUser;
+      const dto: WalletOperationDto = { amount: 100 };
 
       mockWalletService.requestDebin.mockRejectedValue(
         new BadRequestException('Failed to process DEBIN request'),
