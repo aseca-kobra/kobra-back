@@ -16,6 +16,10 @@ describe('TransactionsService', () => {
     findOneByWalletId: jest.fn(),
   };
 
+  let mockSender: User & { wallet: Wallet };
+  let mockRecipient: User & { wallet: Wallet };
+  let now: Date;
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -29,6 +33,40 @@ describe('TransactionsService', () => {
 
     service = module.get<TransactionsService>(TransactionsService);
     _repository = module.get<TransactionsRepository>(TransactionsRepository);
+
+    now = new Date();
+
+    mockSender = {
+      id: '1',
+      email: 'sender@example.com',
+      password: 'hashedPassword',
+      createdAt: now,
+      updatedAt: now,
+      wallet: {
+        id: 'wallet1',
+        balance: 200,
+        userId: '1',
+        createdAt: now,
+        updatedAt: now,
+      },
+    };
+
+    mockRecipient = {
+      id: '2',
+      email: 'recipient@example.com',
+      password: 'hashedPassword',
+      createdAt: now,
+      updatedAt: now,
+      wallet: {
+        id: 'wallet2',
+        balance: 0,
+        userId: '2',
+        createdAt: now,
+        updatedAt: now,
+      },
+    };
+
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
@@ -40,40 +78,13 @@ describe('TransactionsService', () => {
   });
 
   describe('create', () => {
+    it('should have a create method', () => {
+      expect(typeof service.create).toBe('function');
+    });
     it('should create a transfer transaction', async () => {
       const senderId = '1';
       const recipientEmail = 'recipient@example.com';
       const amount = 100;
-
-      const mockSender: User & { wallet: Wallet } = {
-        id: senderId,
-        wallet: {
-          id: 'wallet1',
-          balance: 200,
-          userId: senderId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'sender@example.com',
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const mockRecipient: User & { wallet: Wallet } = {
-        id: '2',
-        wallet: {
-          id: 'wallet2',
-          balance: 0,
-          userId: '2',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: recipientEmail,
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
 
       const mockTransaction: Transaction = {
         id: 'transaction1',
@@ -119,22 +130,6 @@ describe('TransactionsService', () => {
       const senderId = '1';
       const recipientEmail = 'nonexistent@example.com';
       const amount = 100;
-
-      const mockSender: User & { wallet: Wallet } = {
-        id: senderId,
-        wallet: {
-          id: 'wallet1',
-          balance: 200,
-          userId: senderId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'sender@example.com',
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
       mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
       mockRepository.findRecipientWithWallet.mockRejectedValue(
         new NotFoundException('Recipient not found'),
@@ -150,36 +145,6 @@ describe('TransactionsService', () => {
       const recipientEmail = 'recipient@example.com';
       const amount = 300;
 
-      const mockSender: User & { wallet: Wallet } = {
-        id: senderId,
-        wallet: {
-          id: 'wallet1',
-          balance: 200,
-          userId: senderId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'sender@example.com',
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const mockRecipient: User & { wallet: Wallet } = {
-        id: '2',
-        wallet: {
-          id: 'wallet2',
-          balance: 0,
-          userId: '2',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: recipientEmail,
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
       mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
       mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
 
@@ -187,25 +152,37 @@ describe('TransactionsService', () => {
         service.create({ amount, recipientEmail }, senderId),
       ).rejects.toThrow(BadRequestException);
     });
+    it('should throw BadRequestException if sender tries to transfer to self', async () => {
+      const senderId = '1';
+      const email = 'sender@example.com';
+      const amount = 50;
+
+      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+      mockRepository.findRecipientWithWallet.mockResolvedValue(mockSender);
+
+      await expect(
+        service.create({ amount, recipientEmail: email }, senderId),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('findAll', () => {
-    it('should return all transactions for a user', async () => {
+    it('should have a findAll method', () => {
+      expect(typeof service.findAll).toBe('function');
+    });
+    it('should return an empty array if there are no transactions', async () => {
       const userId = '1';
-      const mockUser: User & { wallet: Wallet } = {
-        id: userId,
-        wallet: {
-          id: 'wallet1',
-          balance: 100,
-          userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'user@example.com',
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+
+      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+      mockRepository.findAllByWalletId.mockResolvedValue([]);
+
+      const result = await service.findAll(userId);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return all TRANSFER_OUT transactions for a user', async () => {
+      const userId = '1';
 
       const mockTransactions: Transaction[] = [
         {
@@ -219,17 +196,147 @@ describe('TransactionsService', () => {
         },
       ];
 
-      mockRepository.findUserWithWallet.mockResolvedValue(mockUser);
+      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
       mockRepository.findAllByWalletId.mockResolvedValue(mockTransactions);
 
       const result = await service.findAll(userId);
 
       expect(result).toEqual(mockTransactions);
       expect(mockRepository.findAllByWalletId).toHaveBeenCalledWith(
-        mockUser.wallet.id,
+        mockSender.wallet.id,
+      );
+    });
+    it('should return all TRANSFER_IN transactions for a user', async () => {
+      const userId = '1';
+
+      const mockTransactions: Transaction[] = [
+        {
+          id: 'transaction2',
+          amount: 50,
+          type: TransactionType.TRANSFER_IN,
+          walletId: 'wallet1',
+          relatedUserId: '3',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+      mockRepository.findAllByWalletId.mockResolvedValue(mockTransactions);
+
+      const result = await service.findAll(userId);
+
+      expect(result).toEqual(mockTransactions);
+      expect(mockRepository.findAllByWalletId).toHaveBeenCalledWith(
+        mockSender.wallet.id,
+      );
+    });
+    it('should return all WITHDRAWAL transactions for a user', async () => {
+      const userId = '1';
+
+      const mockTransactions: Transaction[] = [
+        {
+          id: 'transaction1',
+          amount: 100,
+          type: TransactionType.WITHDRAWAL,
+          walletId: 'wallet1',
+          relatedUserId: '2',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+      mockRepository.findAllByWalletId.mockResolvedValue(mockTransactions);
+
+      const result = await service.findAll(userId);
+
+      expect(result).toEqual(mockTransactions);
+      expect(mockRepository.findAllByWalletId).toHaveBeenCalledWith(
+        mockSender.wallet.id,
+      );
+    });
+    it('should return all DEPOSIT transactions for a user', async () => {
+      const userId = '1';
+
+      const mockTransactions: Transaction[] = [
+        {
+          id: 'transaction1',
+          amount: 100,
+          type: TransactionType.DEPOSIT,
+          walletId: 'wallet1',
+          relatedUserId: '2',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+      mockRepository.findAllByWalletId.mockResolvedValue(mockTransactions);
+
+      const result = await service.findAll(userId);
+
+      expect(result).toEqual(mockTransactions);
+      expect(mockRepository.findAllByWalletId).toHaveBeenCalledWith(
+        mockSender.wallet.id,
       );
     });
 
+    it('should return all transaction types for a user', async () => {
+      const userId = '1';
+
+      const mockTransactions: Transaction[] = [
+        {
+          id: 'transaction1',
+          amount: 100,
+          type: TransactionType.TRANSFER_OUT,
+          walletId: 'wallet1',
+          relatedUserId: '2',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'transaction2',
+          amount: 75,
+          type: TransactionType.TRANSFER_IN,
+          walletId: 'wallet1',
+          relatedUserId: '3',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'transaction2',
+          amount: 75,
+          type: TransactionType.WITHDRAWAL,
+          walletId: 'wallet1',
+          relatedUserId: '3',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'transaction2',
+          amount: 75,
+          type: TransactionType.DEPOSIT,
+          walletId: 'wallet1',
+          relatedUserId: '3',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+      mockRepository.findAllByWalletId.mockResolvedValue(mockTransactions);
+
+      const result = await service.findAll(userId);
+
+      expect(result).toHaveLength(4);
+      expect(result.map((tx) => tx.type)).toEqual([
+        TransactionType.TRANSFER_OUT,
+        TransactionType.TRANSFER_IN,
+        TransactionType.WITHDRAWAL,
+        TransactionType.DEPOSIT,
+      ]);
+    });
     it('should throw NotFoundException if wallet not found', async () => {
       const userId = '1';
       mockRepository.findUserWithWallet.mockRejectedValue(
@@ -241,6 +348,9 @@ describe('TransactionsService', () => {
   });
 
   describe('findOne', () => {
+    it('should have a findOne method', () => {
+      expect(typeof service.findOne).toBe('function');
+    });
     it('should return a specific transaction', async () => {
       const userId = '1';
       const transactionId = 'transaction1';
