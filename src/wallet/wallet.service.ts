@@ -30,6 +30,10 @@ export class WalletService {
       throw new NotFoundException('Wallet not found for this user');
     }
 
+    if (amount <= 0) {
+      throw new BadRequestException('Amount must be greater than zero');
+    }
+
     return this.walletRepository.deposit(wallet.id!, amount);
   }
 
@@ -38,6 +42,10 @@ export class WalletService {
 
     if (!wallet || !wallet.id) {
       throw new NotFoundException('Wallet not found for this user');
+    }
+
+    if (amount <= 0) {
+      throw new BadRequestException('Amount must be greater than zero');
     }
 
     try {
