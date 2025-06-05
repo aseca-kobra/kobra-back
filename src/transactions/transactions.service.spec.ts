@@ -3,6 +3,7 @@ import { TransactionsService } from './transactions.service';
 import { TransactionsRepository } from './transactions.repository';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { TransactionType, User, Wallet, Transaction } from '@prisma/client';
+import { TransactionWithRelatedUser } from './types/transaction.types';
 
 describe('TransactionsService', () => {
   let service: TransactionsService;
@@ -14,6 +15,46 @@ describe('TransactionsService', () => {
     createTransfer: jest.fn(),
     findAllByWalletId: jest.fn(),
     findOneByWalletId: jest.fn(),
+  };
+
+  const mockSender: User & { wallet: Wallet } = {
+    id: 'sender-123',
+    email: 'sender@example.com',
+    password: 'hashedPassword',
+    createdAt: new Date('2025-01-01'),
+    updatedAt: new Date('2025-01-01'),
+    wallet: {
+      id: 'wallet-sender-123',
+      balance: 1000,
+      userId: 'sender-123',
+      createdAt: new Date('2025-01-01'),
+      updatedAt: new Date('2025-01-01'),
+    },
+  };
+
+  const mockRecipient: User & { wallet: Wallet } = {
+    id: 'recipient-123',
+    email: 'recipient@example.com',
+    password: 'hashedPassword',
+    createdAt: new Date('2025-01-01'),
+    updatedAt: new Date('2025-01-01'),
+    wallet: {
+      id: 'wallet-recipient-123',
+      balance: 500,
+      userId: 'recipient-123',
+      createdAt: new Date('2025-01-01'),
+      updatedAt: new Date('2025-01-01'),
+    },
+  };
+
+  const mockTransaction: Transaction = {
+    id: 'transaction-123',
+    amount: 100,
+    type: TransactionType.TRANSFER_OUT,
+    walletId: 'wallet-sender-123',
+    relatedUserId: 'recipient-123',
+    createdAt: new Date('2025-01-01'),
+    updatedAt: new Date('2025-01-01'),
   };
 
   beforeEach(async () => {
@@ -40,283 +81,569 @@ describe('TransactionsService', () => {
   });
 
   describe('create', () => {
-    it('should create a transfer transaction', async () => {
-      const senderId = '1';
-      const recipientEmail = 'recipient@example.com';
-      const amount = 100;
+    describe('successful transfers', () => {
+      it('should create transfer with valid amount', async () => {
+        const createDto = {
+          amount: 100,
+          recipientEmail: 'recipient@example.com',
+        };
+        const senderId = 'sender-123';
 
-      const mockSender: User & { wallet: Wallet } = {
-        id: senderId,
-        wallet: {
-          id: 'wallet1',
-          balance: 200,
-          userId: senderId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'sender@example.com',
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
+        mockRepository.createTransfer.mockResolvedValue(mockTransaction);
 
-      const mockRecipient: User & { wallet: Wallet } = {
-        id: '2',
-        wallet: {
-          id: 'wallet2',
-          balance: 0,
-          userId: '2',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: recipientEmail,
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        const result = await service.create(createDto, senderId);
 
-      const mockTransaction: Transaction = {
-        id: 'transaction1',
-        amount,
-        type: TransactionType.TRANSFER_OUT,
-        walletId: mockSender.wallet.id,
-        relatedUserId: mockRecipient.id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        expect(result).toEqual(mockTransaction);
+        expect(mockRepository.findUserWithWallet).toHaveBeenCalledWith(
+          senderId,
+        );
+        expect(mockRepository.findRecipientWithWallet).toHaveBeenCalledWith(
+          createDto.recipientEmail,
+        );
+        expect(mockRepository.createTransfer).toHaveBeenCalledWith(
+          mockSender.wallet.id,
+          mockRecipient.wallet.id,
+          createDto.amount,
+          mockSender.id,
+          mockRecipient.id,
+        );
+      });
 
-      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
-      mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
-      mockRepository.createTransfer.mockResolvedValue(mockTransaction);
+      it('should create transfer with small valid amount (0.01)', async () => {
+        const createDto = {
+          amount: 0.01,
+          recipientEmail: 'recipient@example.com',
+        };
+        const senderId = 'sender-123';
+        const smallAmountTransaction = { ...mockTransaction, amount: 0.01 };
 
-      const result = await service.create({ amount, recipientEmail }, senderId);
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
+        mockRepository.createTransfer.mockResolvedValue(smallAmountTransaction);
 
-      expect(result).toEqual(mockTransaction);
-      expect(mockRepository.createTransfer).toHaveBeenCalledWith(
-        mockSender.wallet.id,
-        mockRecipient.wallet.id,
-        amount,
-        mockSender.id,
-        mockRecipient.id,
-      );
+        const result = await service.create(createDto, senderId);
+
+        expect(result).toEqual(smallAmountTransaction);
+        expect(mockRepository.createTransfer).toHaveBeenCalledWith(
+          mockSender.wallet.id,
+          mockRecipient.wallet.id,
+          0.01,
+          mockSender.id,
+          mockRecipient.id,
+        );
+      });
+
+      it('should create transfer with exact balance amount', async () => {
+        const createDto = {
+          amount: 1000,
+          recipientEmail: 'recipient@example.com',
+        };
+        const senderId = 'sender-123';
+        const exactBalanceTransaction = { ...mockTransaction, amount: 1000 };
+
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
+        mockRepository.createTransfer.mockResolvedValue(
+          exactBalanceTransaction,
+        );
+
+        const result = await service.create(createDto, senderId);
+
+        expect(result).toEqual(exactBalanceTransaction);
+        expect(mockRepository.createTransfer).toHaveBeenCalledWith(
+          mockSender.wallet.id,
+          mockRecipient.wallet.id,
+          1000,
+          mockSender.id,
+          mockRecipient.id,
+        );
+      });
     });
 
-    it('should throw NotFoundException if sender wallet not found', async () => {
-      const senderId = '1';
-      const recipientEmail = 'recipient@example.com';
-      const amount = 100;
+    describe('insufficient balance scenarios', () => {
+      it('should throw BadRequestException when amount exceeds balance', async () => {
+        const createDto = {
+          amount: 1500,
+          recipientEmail: 'recipient@example.com',
+        };
+        const senderId = 'sender-123';
 
-      mockRepository.findUserWithWallet.mockRejectedValue(
-        new NotFoundException('Wallet not found for this user'),
-      );
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
 
-      await expect(
-        service.create({ amount, recipientEmail }, senderId),
-      ).rejects.toThrow(NotFoundException);
+        await expect(service.create(createDto, senderId)).rejects.toThrow(
+          BadRequestException,
+        );
+        await expect(service.create(createDto, senderId)).rejects.toThrow(
+          'Insufficient balance',
+        );
+        expect(mockRepository.createTransfer).not.toHaveBeenCalled();
+      });
+
+      it('should throw BadRequestException when amount slightly exceeds balance', async () => {
+        const createDto = {
+          amount: 1000.01,
+          recipientEmail: 'recipient@example.com',
+        };
+        const senderId = 'sender-123';
+
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
+
+        await expect(service.create(createDto, senderId)).rejects.toThrow(
+          BadRequestException,
+        );
+        expect(mockRepository.createTransfer).not.toHaveBeenCalled();
+      });
+
+      it('should throw BadRequestException when sender has zero balance', async () => {
+        const createDto = {
+          amount: 1,
+          recipientEmail: 'recipient@example.com',
+        };
+        const senderId = 'sender-123';
+        const zeroBalanceSender = {
+          ...mockSender,
+          wallet: { ...mockSender.wallet, balance: 0 },
+        };
+
+        mockRepository.findUserWithWallet.mockResolvedValue(zeroBalanceSender);
+        mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
+
+        await expect(service.create(createDto, senderId)).rejects.toThrow(
+          BadRequestException,
+        );
+        expect(mockRepository.createTransfer).not.toHaveBeenCalled();
+      });
     });
 
-    it('should throw NotFoundException if recipient not found', async () => {
-      const senderId = '1';
-      const recipientEmail = 'nonexistent@example.com';
-      const amount = 100;
+    describe('sender not found scenarios', () => {
+      it('should throw NotFoundException when sender user not found', async () => {
+        const createDto = {
+          amount: 100,
+          recipientEmail: 'recipient@example.com',
+        };
+        const senderId = 'non-existent-sender';
 
-      const mockSender: User & { wallet: Wallet } = {
-        id: senderId,
-        wallet: {
-          id: 'wallet1',
-          balance: 200,
-          userId: senderId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'sender@example.com',
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        mockRepository.findUserWithWallet.mockRejectedValue(
+          new NotFoundException('Wallet not found for this user'),
+        );
 
-      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
-      mockRepository.findRecipientWithWallet.mockRejectedValue(
-        new NotFoundException('Recipient not found'),
-      );
+        await expect(service.create(createDto, senderId)).rejects.toThrow(
+          NotFoundException,
+        );
+        await expect(service.create(createDto, senderId)).rejects.toThrow(
+          'Wallet not found for this user',
+        );
+        expect(mockRepository.findRecipientWithWallet).not.toHaveBeenCalled();
+        expect(mockRepository.createTransfer).not.toHaveBeenCalled();
+      });
 
-      await expect(
-        service.create({ amount, recipientEmail }, senderId),
-      ).rejects.toThrow(NotFoundException);
+      it('should throw NotFoundException when sender wallet is null', async () => {
+        const createDto = {
+          amount: 100,
+          recipientEmail: 'recipient@example.com',
+        };
+        const senderId = 'sender-123';
+        const senderWithoutWallet = { ...mockSender, wallet: null };
+
+        mockRepository.findUserWithWallet.mockResolvedValue(
+          senderWithoutWallet,
+        );
+        mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
+
+        await expect(service.create(createDto, senderId)).rejects.toThrow();
+        expect(mockRepository.findRecipientWithWallet).toHaveBeenCalledWith(
+          createDto.recipientEmail,
+        );
+        expect(mockRepository.createTransfer).not.toHaveBeenCalled();
+      });
     });
 
-    it('should throw BadRequestException if insufficient balance', async () => {
-      const senderId = '1';
-      const recipientEmail = 'recipient@example.com';
-      const amount = 300;
+    describe('recipient not found scenarios', () => {
+      it('should throw NotFoundException when recipient email not found', async () => {
+        const createDto = {
+          amount: 100,
+          recipientEmail: 'nonexistent@example.com',
+        };
+        const senderId = 'sender-123';
 
-      const mockSender: User & { wallet: Wallet } = {
-        id: senderId,
-        wallet: {
-          id: 'wallet1',
-          balance: 200,
-          userId: senderId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'sender@example.com',
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findRecipientWithWallet.mockRejectedValue(
+          new NotFoundException('Recipient not found'),
+        );
 
-      const mockRecipient: User & { wallet: Wallet } = {
-        id: '2',
-        wallet: {
-          id: 'wallet2',
-          balance: 0,
-          userId: '2',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: recipientEmail,
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        await expect(service.create(createDto, senderId)).rejects.toThrow(
+          NotFoundException,
+        );
+        await expect(service.create(createDto, senderId)).rejects.toThrow(
+          'Recipient not found',
+        );
+        expect(mockRepository.findUserWithWallet).toHaveBeenCalledWith(
+          senderId,
+        );
+        expect(mockRepository.createTransfer).not.toHaveBeenCalled();
+      });
 
-      mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
-      mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
+      it('should throw NotFoundException when recipient wallet is null', async () => {
+        const createDto = {
+          amount: 100,
+          recipientEmail: 'recipient@example.com',
+        };
+        const senderId = 'sender-123';
+        const recipientWithoutWallet = { ...mockRecipient, wallet: null };
 
-      await expect(
-        service.create({ amount, recipientEmail }, senderId),
-      ).rejects.toThrow(BadRequestException);
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findRecipientWithWallet.mockResolvedValue(
+          recipientWithoutWallet,
+        );
+
+        await expect(service.create(createDto, senderId)).rejects.toThrow();
+        expect(mockRepository.createTransfer).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('method call order verification', () => {
+      it('should call methods in correct order for successful transfer', async () => {
+        const createDto = {
+          amount: 100,
+          recipientEmail: 'recipient@example.com',
+        };
+        const senderId = 'sender-123';
+
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
+        mockRepository.createTransfer.mockResolvedValue(mockTransaction);
+
+        await service.create(createDto, senderId);
+
+        const senderCall =
+          mockRepository.findUserWithWallet.mock.invocationCallOrder[0];
+        const recipientCall =
+          mockRepository.findRecipientWithWallet.mock.invocationCallOrder[0];
+        const transferCall =
+          mockRepository.createTransfer.mock.invocationCallOrder[0];
+
+        expect(senderCall).toBeLessThan(recipientCall);
+        expect(recipientCall).toBeLessThan(transferCall);
+      });
+
+      it('should not call createTransfer when sender not found', async () => {
+        const createDto = {
+          amount: 100,
+          recipientEmail: 'recipient@example.com',
+        };
+        const senderId = 'non-existent';
+
+        mockRepository.findUserWithWallet.mockRejectedValue(
+          new NotFoundException('Wallet not found for this user'),
+        );
+
+        await expect(service.create(createDto, senderId)).rejects.toThrow();
+        expect(mockRepository.findUserWithWallet).toHaveBeenCalled();
+        expect(mockRepository.findRecipientWithWallet).not.toHaveBeenCalled();
+        expect(mockRepository.createTransfer).not.toHaveBeenCalled();
+      });
+
+      it('should not call createTransfer when recipient not found', async () => {
+        const createDto = {
+          amount: 100,
+          recipientEmail: 'nonexistent@example.com',
+        };
+        const senderId = 'sender-123';
+
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findRecipientWithWallet.mockRejectedValue(
+          new NotFoundException('Recipient not found'),
+        );
+
+        await expect(service.create(createDto, senderId)).rejects.toThrow();
+        expect(mockRepository.findUserWithWallet).toHaveBeenCalled();
+        expect(mockRepository.findRecipientWithWallet).toHaveBeenCalled();
+        expect(mockRepository.createTransfer).not.toHaveBeenCalled();
+      });
+
+      it('should not call createTransfer when insufficient balance', async () => {
+        const createDto = {
+          amount: 2000,
+          recipientEmail: 'recipient@example.com',
+        };
+        const senderId = 'sender-123';
+
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findRecipientWithWallet.mockResolvedValue(mockRecipient);
+
+        await expect(service.create(createDto, senderId)).rejects.toThrow();
+        expect(mockRepository.findUserWithWallet).toHaveBeenCalled();
+        expect(mockRepository.findRecipientWithWallet).toHaveBeenCalled();
+        expect(mockRepository.createTransfer).not.toHaveBeenCalled();
+      });
     });
   });
 
   describe('findAll', () => {
-    it('should return all transactions for a user', async () => {
-      const userId = '1';
-      const mockUser: User & { wallet: Wallet } = {
-        id: userId,
-        wallet: {
-          id: 'wallet1',
-          balance: 100,
-          userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'user@example.com',
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    describe('successful retrieval', () => {
+      it('should return all transactions for user with transactions', async () => {
+        const userId = 'sender-123';
+        const mockTransactions: TransactionWithRelatedUser[] = [
+          {
+            ...mockTransaction,
+            relatedUser: {
+              email: 'recipient@example.com',
+            },
+          },
+          {
+            id: 'transaction-456',
+            amount: 200,
+            type: TransactionType.TRANSFER_IN,
+            walletId: 'wallet-sender-123',
+            relatedUserId: 'sender-456',
+            createdAt: new Date('2025-01-02'),
+            updatedAt: new Date('2025-01-02'),
+            relatedUser: {
+              email: 'another@example.com',
+            },
+          },
+        ];
 
-      const mockTransactions: Transaction[] = [
-        {
-          id: 'transaction1',
-          amount: 100,
-          type: TransactionType.TRANSFER_OUT,
-          walletId: 'wallet1',
-          relatedUserId: '2',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ];
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findAllByWalletId.mockResolvedValue(mockTransactions);
 
-      mockRepository.findUserWithWallet.mockResolvedValue(mockUser);
-      mockRepository.findAllByWalletId.mockResolvedValue(mockTransactions);
+        const result = await service.findAll(userId);
 
-      const result = await service.findAll(userId);
+        expect(result).toEqual(mockTransactions);
+        expect(mockRepository.findUserWithWallet).toHaveBeenCalledWith(userId);
+        expect(mockRepository.findAllByWalletId).toHaveBeenCalledWith(
+          mockSender.wallet.id,
+        );
+        expect(result).toHaveLength(2);
+      });
 
-      expect(result).toEqual(mockTransactions);
-      expect(mockRepository.findAllByWalletId).toHaveBeenCalledWith(
-        mockUser.wallet.id,
-      );
+      it('should return empty array for user with no transactions', async () => {
+        const userId = 'sender-123';
+        const emptyTransactions: TransactionWithRelatedUser[] = [];
+
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findAllByWalletId.mockResolvedValue(emptyTransactions);
+
+        const result = await service.findAll(userId);
+
+        expect(result).toEqual([]);
+        expect(mockRepository.findAllByWalletId).toHaveBeenCalledWith(
+          mockSender.wallet.id,
+        );
+      });
+
+      it('should return single transaction for user with one transaction', async () => {
+        const userId = 'sender-123';
+        const singleTransaction: TransactionWithRelatedUser[] = [
+          {
+            ...mockTransaction,
+            relatedUser: {
+              email: 'recipient@example.com',
+            },
+          },
+        ];
+
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findAllByWalletId.mockResolvedValue(singleTransaction);
+
+        const result = await service.findAll(userId);
+
+        expect(result).toEqual(singleTransaction);
+        expect(result).toHaveLength(1);
+      });
     });
 
-    it('should throw NotFoundException if wallet not found', async () => {
-      const userId = '1';
-      mockRepository.findUserWithWallet.mockRejectedValue(
-        new NotFoundException('Wallet not found for this user'),
-      );
+    describe('user not found scenarios', () => {
+      it('should throw NotFoundException when user not found', async () => {
+        const userId = 'non-existent-user';
 
-      await expect(service.findAll(userId)).rejects.toThrow(NotFoundException);
+        mockRepository.findUserWithWallet.mockRejectedValue(
+          new NotFoundException('Wallet not found for this user'),
+        );
+
+        await expect(service.findAll(userId)).rejects.toThrow(
+          NotFoundException,
+        );
+        await expect(service.findAll(userId)).rejects.toThrow(
+          'Wallet not found for this user',
+        );
+        expect(mockRepository.findUserWithWallet).toHaveBeenCalledWith(userId);
+        expect(mockRepository.findAllByWalletId).not.toHaveBeenCalled();
+      });
+
+      it('should throw error when wallet is null', async () => {
+        const userId = 'sender-123';
+        const userWithoutWallet = { ...mockSender, wallet: null };
+
+        mockRepository.findUserWithWallet.mockResolvedValue(userWithoutWallet);
+
+        await expect(service.findAll(userId)).rejects.toThrow();
+        expect(mockRepository.findAllByWalletId).not.toHaveBeenCalled();
+      });
     });
   });
 
   describe('findOne', () => {
-    it('should return a specific transaction', async () => {
-      const userId = '1';
-      const transactionId = 'transaction1';
-      const mockUser: User & { wallet: Wallet } = {
-        id: userId,
-        wallet: {
-          id: 'wallet1',
-          balance: 100,
-          userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'user@example.com',
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    describe('successful retrieval', () => {
+      it('should return specific transaction when found', async () => {
+        const userId = 'sender-123';
+        const transactionId = 'transaction-123';
+        const mockTransactionWithUser: TransactionWithRelatedUser = {
+          ...mockTransaction,
+          relatedUser: {
+            email: 'recipient@example.com',
+          },
+        };
 
-      const mockTransaction: Transaction = {
-        id: transactionId,
-        amount: 100,
-        type: TransactionType.TRANSFER_OUT,
-        walletId: 'wallet1',
-        relatedUserId: '2',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findOneByWalletId.mockResolvedValue(
+          mockTransactionWithUser,
+        );
 
-      mockRepository.findUserWithWallet.mockResolvedValue(mockUser);
-      mockRepository.findOneByWalletId.mockResolvedValue(mockTransaction);
+        const result = await service.findOne(transactionId, userId);
 
-      const result = await service.findOne(transactionId, userId);
+        expect(result).toEqual(mockTransactionWithUser);
+        expect(mockRepository.findUserWithWallet).toHaveBeenCalledWith(userId);
+        expect(mockRepository.findOneByWalletId).toHaveBeenCalledWith(
+          transactionId,
+          mockSender.wallet.id,
+        );
+      });
 
-      expect(result).toEqual(mockTransaction);
-      expect(mockRepository.findOneByWalletId).toHaveBeenCalledWith(
-        transactionId,
-        mockUser.wallet.id,
-      );
+      it('should return transaction with different types', async () => {
+        const userId = 'sender-123';
+        const transactionId = 'transaction-456';
+        const transferInTransaction: TransactionWithRelatedUser = {
+          id: transactionId,
+          amount: 200,
+          type: TransactionType.TRANSFER_IN,
+          walletId: 'wallet-sender-123',
+          relatedUserId: 'sender-456',
+          createdAt: new Date('2025-01-02'),
+          updatedAt: new Date('2025-01-02'),
+          relatedUser: {
+            email: 'another@example.com',
+          },
+        };
+
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findOneByWalletId.mockResolvedValue(
+          transferInTransaction,
+        );
+
+        const result = await service.findOne(transactionId, userId);
+
+        expect(result).toEqual(transferInTransaction);
+        expect(result.type).toBe(TransactionType.TRANSFER_IN);
+      });
     });
 
-    it('should throw NotFoundException if wallet not found', async () => {
-      const userId = '1';
-      const transactionId = 'transaction1';
-      mockRepository.findUserWithWallet.mockRejectedValue(
-        new NotFoundException('Wallet not found for this user'),
-      );
+    describe('transaction not found scenarios', () => {
+      it('should throw NotFoundException when transaction not found', async () => {
+        const userId = 'sender-123';
+        const transactionId = 'non-existent-transaction';
 
-      await expect(service.findOne(transactionId, userId)).rejects.toThrow(
-        NotFoundException,
-      );
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findOneByWalletId.mockResolvedValue(null);
+
+        await expect(service.findOne(transactionId, userId)).rejects.toThrow(
+          NotFoundException,
+        );
+        await expect(service.findOne(transactionId, userId)).rejects.toThrow(
+          `Transaction with ID ${transactionId} not found`,
+        );
+        expect(mockRepository.findOneByWalletId).toHaveBeenCalledWith(
+          transactionId,
+          mockSender.wallet.id,
+        );
+      });
+
+      it('should throw NotFoundException when transaction is undefined', async () => {
+        const userId = 'sender-123';
+        const transactionId = 'transaction-123';
+
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findOneByWalletId.mockResolvedValue(undefined);
+
+        await expect(service.findOne(transactionId, userId)).rejects.toThrow(
+          NotFoundException,
+        );
+      });
     });
 
-    it('should throw NotFoundException if transaction not found', async () => {
-      const userId = '1';
-      const transactionId = 'nonexistent';
-      const mockUser: User & { wallet: Wallet } = {
-        id: userId,
-        wallet: {
-          id: 'wallet1',
-          balance: 100,
-          userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        email: 'user@example.com',
-        password: 'hashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    describe('user not found scenarios', () => {
+      it('should throw NotFoundException when user not found', async () => {
+        const userId = 'non-existent-user';
+        const transactionId = 'transaction-123';
 
-      mockRepository.findUserWithWallet.mockResolvedValue(mockUser);
-      mockRepository.findOneByWalletId.mockResolvedValue(null);
+        mockRepository.findUserWithWallet.mockRejectedValue(
+          new NotFoundException('Wallet not found for this user'),
+        );
 
-      await expect(service.findOne(transactionId, userId)).rejects.toThrow(
-        NotFoundException,
-      );
+        await expect(service.findOne(transactionId, userId)).rejects.toThrow(
+          NotFoundException,
+        );
+        await expect(service.findOne(transactionId, userId)).rejects.toThrow(
+          'Wallet not found for this user',
+        );
+        expect(mockRepository.findUserWithWallet).toHaveBeenCalledWith(userId);
+        expect(mockRepository.findOneByWalletId).not.toHaveBeenCalled();
+      });
+
+      it('should throw error when wallet is null', async () => {
+        const userId = 'sender-123';
+        const transactionId = 'transaction-123';
+        const userWithoutWallet = { ...mockSender, wallet: null };
+
+        mockRepository.findUserWithWallet.mockResolvedValue(userWithoutWallet);
+
+        await expect(service.findOne(transactionId, userId)).rejects.toThrow();
+        expect(mockRepository.findOneByWalletId).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('method call order verification', () => {
+      it('should call methods in correct order for successful retrieval', async () => {
+        const userId = 'sender-123';
+        const transactionId = 'transaction-123';
+        const mockTransactionWithUser: TransactionWithRelatedUser = {
+          ...mockTransaction,
+          relatedUser: {
+            email: 'recipient@example.com',
+          },
+        };
+
+        mockRepository.findUserWithWallet.mockResolvedValue(mockSender);
+        mockRepository.findOneByWalletId.mockResolvedValue(
+          mockTransactionWithUser,
+        );
+
+        await service.findOne(transactionId, userId);
+
+        const userCall =
+          mockRepository.findUserWithWallet.mock.invocationCallOrder[0];
+        const transactionCall =
+          mockRepository.findOneByWalletId.mock.invocationCallOrder[0];
+
+        expect(userCall).toBeLessThan(transactionCall);
+      });
+
+      it('should not call findOneByWalletId when user not found', async () => {
+        const userId = 'non-existent';
+        const transactionId = 'transaction-123';
+
+        mockRepository.findUserWithWallet.mockRejectedValue(
+          new NotFoundException('Wallet not found for this user'),
+        );
+
+        await expect(service.findOne(transactionId, userId)).rejects.toThrow();
+        expect(mockRepository.findUserWithWallet).toHaveBeenCalled();
+        expect(mockRepository.findOneByWalletId).not.toHaveBeenCalled();
+      });
     });
   });
 });
