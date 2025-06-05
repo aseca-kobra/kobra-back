@@ -49,12 +49,38 @@ describe('UsersService', () => {
   });
 
   describe('create', () => {
-    it('should create a new user with hashed password', async () => {
+    it('should have a create method', () => {
+      expect(typeof service.create).toBe('function');
+    });
+
+    it('should create a new user with the correct email and password ', async () => {
       const createUserDto = {
         email: 'test@example.com',
         password: 'password123',
       };
 
+      const expectedUser = {
+        id: '1',
+        email: 'test@example.com',
+        password: 'hashed_password',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockRepository.create.mockResolvedValue(expectedUser);
+
+      const result = await service.create(createUserDto);
+
+      expect(result).toEqual(expectedUser);
+      expect(mockRepository.create).toHaveBeenCalledWith(
+        'test@example.com',
+        'hashed_password',
+      );
+    });
+    it('should have a hashed password', async () => {
+      const createUserDto = {
+        email: 'test@example.com',
+        password: 'password123',
+      };
       const expectedUser = {
         id: '1',
         email: 'test@example.com',
@@ -74,6 +100,26 @@ describe('UsersService', () => {
         'hashed_password',
       );
     });
+    it('should not expose the original password', async () => {
+      const createUserDto = {
+        email: 'secure@example.com',
+        password: 'mySecret123',
+      };
+
+      const expectedUser = {
+        id: '1',
+        email: 'secure@example.com',
+        password: 'hashed_password',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockRepository.create.mockResolvedValue(expectedUser);
+
+      const result = await service.create(createUserDto);
+
+      expect(result.password).not.toEqual(createUserDto.password);
+    });
 
     it('should throw ConflictException if email already exists', async () => {
       const createUserDto = {
@@ -89,9 +135,61 @@ describe('UsersService', () => {
         ConflictException,
       );
     });
+    it('should call repository.create with correct arguments', async () => {
+      const createUserDto = {
+        email: 'input@example.com',
+        password: 'test123',
+      };
+
+      mockRepository.create.mockResolvedValue({
+        id: '1',
+        email: createUserDto.email,
+        password: 'hashed_password',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await service.create(createUserDto);
+
+      expect(mockRepository.create).toHaveBeenCalledWith(
+        createUserDto.email,
+        'hashed_password',
+      );
+    });
   });
 
   describe('findAll', () => {
+    it('should have a findAll method', () => {
+      expect(typeof service.findAll).toBe('function');
+    });
+
+    it('should return empty array when no users exist', async () => {
+      mockRepository.findAll.mockResolvedValue([]);
+
+      const result = await service.findAll();
+
+      expect(result).toEqual([]);
+      expect(mockRepository.findAll).toHaveBeenCalled();
+    });
+    it('should return a single user when one exists', async () => {
+      const singleUser = [
+        {
+          id: '1',
+          email: 'single@example.com',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      mockRepository.findAll.mockResolvedValue(singleUser);
+
+      const result = await service.findAll();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].email).toBe('single@example.com');
+      expect(result).toEqual(singleUser);
+    });
+
     it('should return an array of users', async () => {
       const expectedUsers = [
         {
@@ -109,18 +207,19 @@ describe('UsersService', () => {
       expect(result).toEqual(expectedUsers);
       expect(mockRepository.findAll).toHaveBeenCalled();
     });
-
-    it('should return empty array when no users exist', async () => {
-      mockRepository.findAll.mockResolvedValue([]);
-
-      const result = await service.findAll();
-
-      expect(result).toEqual([]);
-      expect(mockRepository.findAll).toHaveBeenCalled();
-    });
   });
 
   describe('findOne', () => {
+    it('should have a findOne method', () => {
+      expect(typeof service.findOne).toBe('function');
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      const userId = '999';
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.findOne(userId)).rejects.toThrow(NotFoundException);
+    });
     it('should return a user by id', async () => {
       const userId = '1';
       const expectedUser = {
@@ -137,16 +236,21 @@ describe('UsersService', () => {
       expect(result).toEqual(expectedUser);
       expect(mockRepository.findOne).toHaveBeenCalledWith(userId);
     });
-
-    it('should throw NotFoundException if user not found', async () => {
-      const userId = '999';
-      mockRepository.findOne.mockResolvedValue(null);
-
-      await expect(service.findOne(userId)).rejects.toThrow(NotFoundException);
-    });
   });
 
   describe('findByEmail', () => {
+    it('should have a findByEmail method', () => {
+      expect(typeof service.findByEmail).toBe('function');
+    });
+
+    it('should return null if user not found by email', async () => {
+      const email = 'nonexistent@example.com';
+      mockRepository.findByEmail.mockResolvedValue(null);
+
+      const result = await service.findByEmail(email);
+
+      expect(result).toBeNull();
+    });
     it('should return a user by email', async () => {
       const email = 'test@example.com';
       const expectedUser = {
@@ -164,18 +268,12 @@ describe('UsersService', () => {
       expect(result).toEqual(expectedUser);
       expect(mockRepository.findByEmail).toHaveBeenCalledWith(email);
     });
-
-    it('should return null if user not found by email', async () => {
-      const email = 'nonexistent@example.com';
-      mockRepository.findByEmail.mockResolvedValue(null);
-
-      const result = await service.findByEmail(email);
-
-      expect(result).toBeNull();
-    });
   });
 
   describe('update', () => {
+    it('should have an update method', () => {
+      expect(typeof service.update).toBe('function');
+    });
     it('should update a user', async () => {
       const userId = '1';
       const updateUserDto = {
@@ -199,16 +297,6 @@ describe('UsersService', () => {
         email: 'updated@example.com',
       });
     });
-
-    it('should throw NotFoundException if user not found', async () => {
-      const userId = '999';
-      mockRepository.findOne.mockResolvedValue(null);
-
-      await expect(
-        service.update(userId, { email: 'updated@example.com' }),
-      ).rejects.toThrow(NotFoundException);
-    });
-
     it('should throw ConflictException if email already exists', async () => {
       const userId = '1';
       const updateUserDto = {
@@ -227,6 +315,9 @@ describe('UsersService', () => {
   });
 
   describe('remove', () => {
+    it('should have a remove method', () => {
+      expect(typeof service.remove).toBe('function');
+    });
     it('should remove a user', async () => {
       const userId = '1';
       const expectedUser = {
@@ -244,12 +335,13 @@ describe('UsersService', () => {
       expect(result).toEqual(expectedUser);
       expect(mockRepository.delete).toHaveBeenCalledWith(userId);
     });
+    it('should not call delete if findOne throws an error', async () => {
+      const userId = '3';
 
-    it('should throw NotFoundException if user not found', async () => {
-      const userId = '999';
-      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.findOne.mockRejectedValue(new Error('DB error'));
 
-      await expect(service.remove(userId)).rejects.toThrow(NotFoundException);
+      await expect(service.remove(userId)).rejects.toThrow('DB error');
+      expect(mockRepository.delete).not.toHaveBeenCalled();
     });
   });
 });

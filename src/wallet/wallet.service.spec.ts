@@ -48,6 +48,9 @@ describe('WalletService', () => {
   });
 
   describe('getBalance', () => {
+    it('should have a getBalance method', () => {
+      expect(typeof service.getBalance).toBe('function');
+    });
     it('should return wallet balance', async () => {
       const userId = '1';
       const mockWallet: Wallet = {
@@ -78,6 +81,9 @@ describe('WalletService', () => {
   });
 
   describe('deposit', () => {
+    it('should have a deposit method', () => {
+      expect(typeof service.deposit).toBe('function');
+    });
     it('should deposit money to wallet', async () => {
       const email = 'test@example.com';
       const amount = 100;
@@ -114,6 +120,9 @@ describe('WalletService', () => {
   });
 
   describe('requestDebin', () => {
+    it('should have a debin method', () => {
+      expect(typeof service.requestDebin).toBe('function');
+    });
     it('should successfully process a DEBIN request', async () => {
       const email = 'test@example.com';
       const amount = 100;
