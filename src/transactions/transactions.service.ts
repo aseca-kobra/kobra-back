@@ -24,6 +24,9 @@ export class TransactionsService {
     if (sender.wallet!.balance < createTransactionDto.amount) {
       throw new BadRequestException('Insufficient balance');
     }
+    if (recipient.email === sender.email) {
+      throw new BadRequestException('Cannot transfer to yourself');
+    }
 
     return this.transactionsRepository.createTransfer(
       sender.wallet!.id,
