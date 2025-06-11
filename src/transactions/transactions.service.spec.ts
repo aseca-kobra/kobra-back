@@ -23,12 +23,14 @@ describe('TransactionsService', () => {
     password: 'hashedPassword',
     createdAt: new Date('2025-01-01'),
     updatedAt: new Date('2025-01-01'),
+    isActive: true,
     wallet: {
       id: 'wallet-sender-123',
       balance: 1000,
       userId: 'sender-123',
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-01-01'),
+      isActive: true,
     },
   };
 
@@ -38,12 +40,14 @@ describe('TransactionsService', () => {
     password: 'hashedPassword',
     createdAt: new Date('2025-01-01'),
     updatedAt: new Date('2025-01-01'),
+    isActive: true,
     wallet: {
       id: 'wallet-recipient-123',
       balance: 500,
       userId: 'recipient-123',
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-01-01'),
+      isActive: true,
     },
   };
 

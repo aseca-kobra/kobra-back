@@ -20,6 +20,9 @@ export class TransactionsService {
     const recipient = await this.transactionsRepository.findRecipientWithWallet(
       createTransactionDto.recipientEmail,
     );
+    if (!sender || !recipient) {
+      throw new NotFoundException('Sender or recipient inactive or not found');
+    }
 
     if (sender.wallet!.balance < createTransactionDto.amount) {
       throw new BadRequestException('Insufficient balance');

@@ -7,6 +7,7 @@ type MockPrismaService = {
   user: {
     findUnique: jest.Mock;
     findMany: jest.Mock;
+    findFirst: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
@@ -28,6 +29,7 @@ describe('UsersRepository', () => {
     user: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -70,21 +72,23 @@ describe('UsersRepository', () => {
         password: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(expectedUser);
+      mockPrismaService.user.findFirst.mockResolvedValue(expectedUser);
 
       const result = await repository.findByEmail(email);
 
       expect(result).toEqual(expectedUser);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { email },
+      expect(mockPrismaService.user.findFirst).toHaveBeenCalledWith({
+        where: { email, isActive: true },
         select: {
           id: true,
           email: true,
           password: true,
           createdAt: true,
           updatedAt: true,
+          isActive: true,
           wallet: {
             select: {
               id: true,
@@ -99,7 +103,7 @@ describe('UsersRepository', () => {
 
     it('should return null if user not found', async () => {
       const email = 'nonexistent@example.com';
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
 
       const result = await repository.findByEmail(email);
 
@@ -117,6 +121,7 @@ describe('UsersRepository', () => {
         password: hashedPassword,
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
       };
 
       const expectedWallet: Wallet = {
@@ -125,6 +130,7 @@ describe('UsersRepository', () => {
         userId: expectedUser.id,
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
       };
 
       mockPrismaService.user.create.mockResolvedValue(expectedUser);
@@ -169,6 +175,7 @@ describe('UsersRepository', () => {
           password: 'hashed_password',
           createdAt: new Date(),
           updatedAt: new Date(),
+          isActive: true,
         },
       ];
 
@@ -178,6 +185,7 @@ describe('UsersRepository', () => {
 
       expect(result).toEqual(expectedUsers);
       expect(mockPrismaService.user.findMany).toHaveBeenCalledWith({
+        where: { isActive: true },
         select: {
           id: true,
           email: true,
@@ -197,15 +205,16 @@ describe('UsersRepository', () => {
         password: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(expectedUser);
+      mockPrismaService.user.findFirst.mockResolvedValue(expectedUser);
 
       const result = await repository.findOne(userId);
 
       expect(result).toEqual(expectedUser);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: userId },
+      expect(mockPrismaService.user.findFirst).toHaveBeenCalledWith({
+        where: { id: userId, isActive: true },
         select: {
           id: true,
           email: true,
@@ -217,7 +226,7 @@ describe('UsersRepository', () => {
 
     it('should return null if user not found', async () => {
       const userId = '999';
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
 
       const result = await repository.findOne(userId);
 
@@ -237,6 +246,7 @@ describe('UsersRepository', () => {
         password: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
       };
 
       mockPrismaService.user.update.mockResolvedValue(expectedUser);
@@ -279,7 +289,7 @@ describe('UsersRepository', () => {
   });
 
   describe('delete', () => {
-    it('should delete a user', async () => {
+    it('should soft delete a user and their wallet in a transaction', async () => {
       const userId = '1';
       const expectedUser: User = {
         id: userId,
@@ -287,25 +297,52 @@ describe('UsersRepository', () => {
         password: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: false, // after soft delete
       };
 
-      mockPrismaService.user.delete.mockResolvedValue(expectedUser);
+      // Mock tx object with user.update and wallet.update
+      const txMock = {
+        user: {
+          update: jest.fn().mockResolvedValue(expectedUser),
+        },
+        wallet: {
+          update: jest.fn().mockResolvedValue({
+            id: 'wallet1',
+            balance: 0,
+            userId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            isActive: false,
+          }),
+        },
+      };
+
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        return callback(txMock as any);
+      });
 
       const result = await repository.delete(userId);
 
       expect(result).toEqual(expectedUser);
-      expect(mockPrismaService.user.delete).toHaveBeenCalledWith({
+      expect(txMock.user.update).toHaveBeenCalledWith({
         where: { id: userId },
+        data: { isActive: false },
+      });
+      expect(txMock.wallet.update).toHaveBeenCalledWith({
+        where: { userId },
+        data: { isActive: false },
       });
     });
 
-    it('should handle delete errors', async () => {
+    it('should handle transaction errors', async () => {
       const userId = '999';
-      const error = new Error('Delete failed');
+      const error = new Error('Transaction failed');
 
-      mockPrismaService.user.delete.mockRejectedValue(error);
+      mockPrismaService.$transaction.mockRejectedValue(error);
 
-      await expect(repository.delete(userId)).rejects.toThrow('Delete failed');
+      await expect(repository.delete(userId)).rejects.toThrow(
+        'Transaction failed',
+      );
     });
   });
 });

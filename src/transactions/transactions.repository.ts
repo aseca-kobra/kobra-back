@@ -9,8 +9,8 @@ export class TransactionsRepository {
   async findUserWithWallet(
     userId: string,
   ): Promise<User & { wallet: Wallet | null }> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, isActive: true },
       include: { wallet: true },
     });
 
@@ -24,8 +24,8 @@ export class TransactionsRepository {
   async findRecipientWithWallet(
     email: string,
   ): Promise<User & { wallet: Wallet | null }> {
-    const recipient = await this.prisma.user.findUnique({
-      where: { email },
+    const recipient = await this.prisma.user.findFirst({
+      where: { email, isActive: true },
       include: { wallet: true },
     });
 

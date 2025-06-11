@@ -27,6 +27,7 @@ describe('WalletService', () => {
     userId: 'user-123',
     createdAt: new Date('2025-01-01'),
     updatedAt: new Date('2025-01-01'),
+    isActive: true,
   };
 
   beforeEach(async () => {

@@ -88,6 +88,7 @@ describe('WalletController', () => {
         userId: '1',
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
       };
 
       mockWalletService.requestDebin.mockResolvedValue(mockWallet);

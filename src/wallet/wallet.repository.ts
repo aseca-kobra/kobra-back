@@ -14,7 +14,7 @@ export class WalletRepository {
 
   async findByUserId(userId: string): Promise<Partial<Wallet> | null> {
     return this.prisma.wallet.findFirst({
-      where: { userId },
+      where: { userId, isActive: true },
       select: {
         id: true,
         balance: true,
@@ -26,7 +26,7 @@ export class WalletRepository {
 
   async findByUserEmail(email: string): Promise<Partial<Wallet> | null> {
     return this.prisma.wallet.findFirst({
-      where: { user: { email } },
+      where: { user: { email, isActive: true } },
       select: {
         id: true,
         balance: true,
