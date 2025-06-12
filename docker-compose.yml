@@ -74,5 +74,14 @@ services:
       retries: 3
     restart: unless-stopped
 
+  kobra-front-app:
+    image: ghcr.io/aseca-kobra/kobra-front:latest
+    container_name: kobra-front-app
+    ports:
+      - "8080:80"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    restart: unless-stopped
+
 volumes:
   kobra-db-data:
