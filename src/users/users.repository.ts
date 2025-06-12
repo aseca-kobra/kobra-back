@@ -7,14 +7,18 @@ export class UsersRepository {
   constructor(private prisma: PrismaService) {}
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
-      where: { email },
+    return this.prisma.user.findFirst({
+      where: {
+        email,
+        isActive: true,
+      },
       select: {
         id: true,
         email: true,
         password: true,
         createdAt: true,
         updatedAt: true,
+        isActive: true,
         wallet: {
           select: {
             id: true,
@@ -49,6 +53,9 @@ export class UsersRepository {
 
   findAll(): Promise<Partial<User>[]> {
     return this.prisma.user.findMany({
+      where: {
+        isActive: true,
+      },
       select: {
         id: true,
         email: true,
@@ -59,8 +66,11 @@ export class UsersRepository {
   }
 
   async findOne(id: string): Promise<Partial<User> | null> {
-    return this.prisma.user.findUnique({
-      where: { id },
+    return this.prisma.user.findFirst({
+      where: {
+        id,
+        isActive: true,
+      },
       select: {
         id: true,
         email: true,
@@ -87,8 +97,24 @@ export class UsersRepository {
   }
 
   async delete(id: string): Promise<User> {
-    return this.prisma.user.delete({
-      where: { id },
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.update({
+        where: { id },
+        data: {
+          isActive: false,
+        },
+      });
+
+      await tx.wallet.update({
+        where: {
+          userId: id,
+        },
+        data: {
+          isActive: false,
+        },
+      });
+
+      return user;
     });
   }
 }

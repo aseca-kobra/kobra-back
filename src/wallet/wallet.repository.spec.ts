@@ -72,6 +72,7 @@ describe('WalletRepository', () => {
         userId: '1',
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
       };
 
       mockPrismaService.wallet.findUnique.mockResolvedValue(mockWallet);
@@ -102,6 +103,7 @@ describe('WalletRepository', () => {
         balance: 100,
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
       };
 
       mockPrismaService.wallet.findFirst.mockResolvedValue(mockWallet);
@@ -110,7 +112,7 @@ describe('WalletRepository', () => {
 
       expect(result).toEqual(mockWallet);
       expect(mockPrismaService.wallet.findFirst).toHaveBeenCalledWith({
-        where: { userId },
+        where: { userId, isActive: true },
         select: {
           id: true,
           balance: true,
@@ -140,6 +142,7 @@ describe('WalletRepository', () => {
         userId: '1',
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
       };
 
       mockPrismaService.wallet.update.mockResolvedValue(expectedWallet);

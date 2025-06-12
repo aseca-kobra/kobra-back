@@ -7,6 +7,7 @@ import { TransactionType, User, Wallet, Transaction } from '@prisma/client';
 type MockPrismaService = {
   user: {
     findUnique: jest.Mock;
+    findFirst: jest.Mock;
   };
   wallet: {
     update: jest.Mock;
@@ -29,6 +30,7 @@ describe('TransactionsRepository', () => {
   const mockPrismaService: MockPrismaService = {
     user: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
     },
     wallet: {
       update: jest.fn(),
@@ -73,29 +75,31 @@ describe('TransactionsRepository', () => {
         password: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
         wallet: {
           id: 'wallet1',
           balance: 100,
           userId,
           createdAt: new Date(),
           updatedAt: new Date(),
+          isActive: true,
         },
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
 
       const result = await repository.findUserWithWallet(userId);
 
       expect(result).toEqual(mockUser);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: userId },
+      expect(mockPrismaService.user.findFirst).toHaveBeenCalledWith({
+        where: { id: userId, isActive: true },
         include: { wallet: true },
       });
     });
 
     it('should throw NotFoundException if user not found', async () => {
       const userId = '999';
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
 
       await expect(repository.findUserWithWallet(userId)).rejects.toThrow(
         NotFoundException,
@@ -110,10 +114,11 @@ describe('TransactionsRepository', () => {
         password: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
         wallet: null,
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
 
       await expect(repository.findUserWithWallet(userId)).rejects.toThrow(
         NotFoundException,
@@ -130,29 +135,31 @@ describe('TransactionsRepository', () => {
         password: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
         wallet: {
           id: 'wallet2',
           balance: 0,
           userId: '2',
           createdAt: new Date(),
           updatedAt: new Date(),
+          isActive: true,
         },
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockRecipient);
+      mockPrismaService.user.findFirst.mockResolvedValue(mockRecipient);
 
       const result = await repository.findRecipientWithWallet(email);
 
       expect(result).toEqual(mockRecipient);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { email },
+      expect(mockPrismaService.user.findFirst).toHaveBeenCalledWith({
+        where: { email, isActive: true },
         include: { wallet: true },
       });
     });
 
     it('should throw NotFoundException if recipient not found', async () => {
       const email = 'nonexistent@example.com';
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
 
       await expect(repository.findRecipientWithWallet(email)).rejects.toThrow(
         NotFoundException,
@@ -167,10 +174,11 @@ describe('TransactionsRepository', () => {
         password: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
+        isActive: true,
         wallet: null,
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockRecipient);
+      mockPrismaService.user.findFirst.mockResolvedValue(mockRecipient);
 
       await expect(repository.findRecipientWithWallet(email)).rejects.toThrow(
         NotFoundException,

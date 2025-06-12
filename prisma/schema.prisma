@@ -13,6 +13,7 @@ model User {
   password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  isActive  Boolean  @default(true)
 
   wallet                  Wallet?
   transactionsRelatedToMe Transaction[]  @relation("RelatedUser")
@@ -23,6 +24,7 @@ model Wallet {
   balance      Float         @default(0)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  isActive     Boolean       @default(true) // <- nuevo campo
   userId       String        @unique
   user         User          @relation(fields: [userId], references: [id])
   transactions Transaction[]
