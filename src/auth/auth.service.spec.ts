@@ -530,7 +530,7 @@ describe('AuthService', () => {
         );
         await expect(service.signup(createUserDto)).rejects.toThrow(
           'Email is too long',
-        ) ;
+        );
         expect(mockUsersService.create).not.toHaveBeenCalled();
       });
 
