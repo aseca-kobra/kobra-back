@@ -5,6 +5,12 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { ExternalApiService } from '../src/wallet/external-api.service';
 
+interface ErrorResponse {
+  statusCode: number;
+  message: string | string[];
+  error: string;
+}
+
 interface WalletResponse {
   balance: number;
 }
@@ -151,6 +157,36 @@ describe('WalletModule (e2e)', () => {
         .post('/wallet/debin')
         .send({ amount: 50 })
         .expect(401);
+    });
+    it('should return 400 if external API responds with insufficient funds', async () => {
+      mockExternalApiService.requestDebin.mockResolvedValueOnce({
+        success: false,
+        message: 'Insufficient funds',
+      });
+
+      const response = await request(app.getHttpServer())
+        .post('/wallet/debin')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ amount: 999999 }) // Simula monto excesivo
+        .expect(400);
+
+      const errorBody = response.body as ErrorResponse;
+      expect(errorBody.message).toContain('Insufficient funds');
+    });
+    it('should return 400 if external API responds with account not found', async () => {
+      mockExternalApiService.requestDebin.mockResolvedValueOnce({
+        success: false,
+        message: 'Account not found',
+      });
+
+      const response = await request(app.getHttpServer())
+        .post('/wallet/debin')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ amount: 100 }) // Monto normal
+        .expect(400);
+
+      const errorBody = response.body as ErrorResponse;
+      expect(errorBody.message).toContain('Account not found');
     });
   });
 });
